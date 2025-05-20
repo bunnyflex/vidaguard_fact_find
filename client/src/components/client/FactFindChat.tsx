@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Question } from "@shared/schema";
+import { useMockUser } from "@/components/auth/ClerkProvider";
 
 interface FactFindChatProps {
   onComplete: (sessionId: number, answers: Array<{ question: string; answer: string }>) => void;
@@ -24,7 +25,16 @@ type Message = {
 };
 
 export default function FactFindChat({ onComplete }: FactFindChatProps) {
-  const { user } = useUser();
+  // Check if Clerk is available via publishable key
+  const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  
+  // Use Clerk or mock authentication based on availability
+  const clerkAuth = clerkAvailable ? useUser() : { user: null };
+  const mockAuth = useMockUser();
+  
+  // Use the appropriate auth source
+  const { user } = clerkAvailable ? clerkAuth : mockAuth;
+  
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState("");

@@ -9,11 +9,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useMockUser } from "@/components/auth/ClerkProvider";
 
 export default function AppHeader() {
   const [location] = useLocation();
-  const { isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Check if Clerk is available via publishable key
+  const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  
+  // Use Clerk or mock authentication based on availability
+  const clerkAuth = clerkAvailable ? useUser() : { isSignedIn: false, user: null };
+  const mockAuth = useMockUser();
+  
+  // Use the appropriate auth source
+  const { isSignedIn, user } = clerkAvailable ? clerkAuth : mockAuth;
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -30,6 +40,26 @@ export default function AppHeader() {
       .map((n) => n[0])
       .join("")
       .toUpperCase();
+  };
+  
+  // Mock sign-in function when Clerk is not available
+  const handleMockSignIn = () => {
+    if (!clerkAvailable && mockAuth.setUser) {
+      mockAuth.setUser({
+        id: "mock-user-123",
+        fullName: "Test User",
+        firstName: "Test",
+        lastName: "User",
+        emailAddresses: [{ emailAddress: "test@example.com" }]
+      });
+    }
+  };
+  
+  // Mock sign-out function when Clerk is not available
+  const handleMockSignOut = () => {
+    if (!clerkAvailable && mockAuth.setUser) {
+      mockAuth.setUser(null);
+    }
   };
 
   return (
@@ -74,7 +104,6 @@ export default function AppHeader() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.imageUrl} alt={user.fullName || "User"} />
                         <AvatarFallback>{getInitials()}</AvatarFallback>
                       </Avatar>
                     </Button>
@@ -82,16 +111,28 @@ export default function AppHeader() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>Profile</DropdownMenuItem>
                     <DropdownMenuItem>
-                      <SignOutButton>Sign out</SignOutButton>
+                      {clerkAvailable ? (
+                        <SignOutButton>Sign out</SignOutButton>
+                      ) : (
+                        <button onClick={handleMockSignOut}>Sign out</button>
+                      )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <SignInButton mode="modal">
-                  <Button variant="default" size="sm">
-                    Sign In
-                  </Button>
-                </SignInButton>
+                <>
+                  {clerkAvailable ? (
+                    <SignInButton mode="modal">
+                      <Button variant="default" size="sm">
+                        Sign In
+                      </Button>
+                    </SignInButton>
+                  ) : (
+                    <Button variant="default" size="sm" onClick={handleMockSignIn}>
+                      Sign In (Dev)
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </nav>
@@ -135,21 +176,33 @@ export default function AppHeader() {
             </a>
             {!isSignedIn && (
               <div className="mt-4">
-                <SignInButton mode="modal">
-                  <Button className="w-full">Sign In</Button>
-                </SignInButton>
+                {clerkAvailable ? (
+                  <SignInButton mode="modal">
+                    <Button className="w-full">Sign In</Button>
+                  </SignInButton>
+                ) : (
+                  <Button className="w-full" onClick={handleMockSignIn}>
+                    Sign In (Development Mode)
+                  </Button>
+                )}
               </div>
             )}
             {isSignedIn && (
               <div className="mt-4 border-t pt-4">
                 <div className="px-3 py-2 text-sm text-muted-foreground">
-                  Signed in as: {user.fullName || user.primaryEmailAddress?.emailAddress}
+                  Signed in as: {user?.fullName || (user?.emailAddresses && user.emailAddresses[0]?.emailAddress)}
                 </div>
-                <SignOutButton>
-                  <Button variant="outline" className="w-full mt-2">
-                    Sign Out
+                {clerkAvailable ? (
+                  <SignOutButton>
+                    <Button variant="outline" className="w-full mt-2">
+                      Sign Out
+                    </Button>
+                  </SignOutButton>
+                ) : (
+                  <Button variant="outline" className="w-full mt-2" onClick={handleMockSignOut}>
+                    Sign Out (Development)
                   </Button>
-                </SignOutButton>
+                )}
               </div>
             )}
           </nav>
