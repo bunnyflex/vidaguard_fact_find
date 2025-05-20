@@ -1,18 +1,61 @@
 import { ClerkProvider as BaseClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 import { useTheme } from "@/components/ui/theme-provider";
+import { createContext, useContext, useState } from "react";
 
 // Get the Clerk publishable key from environment
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+
+// Create a mock user context for development without Clerk
+interface MockUserContextType {
+  isSignedIn: boolean;
+  user: {
+    id: string;
+    fullName: string;
+    firstName: string;
+    lastName: string;
+    emailAddresses: { emailAddress: string }[];
+  } | null;
+  setUser: (user: any) => void;
+}
+
+const MockUserContext = createContext<MockUserContextType>({
+  isSignedIn: false,
+  user: null,
+  setUser: () => {}
+});
+
+// Hook to access mock user
+export const useMockUser = () => useContext(MockUserContext);
+
+// Mock user provider when no Clerk key is available
+function MockUserProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState({
+    id: "dev-user-123",
+    fullName: "Test User",
+    firstName: "Test",
+    lastName: "User",
+    emailAddresses: [{ emailAddress: "test@example.com" }]
+  });
+
+  return (
+    <MockUserContext.Provider value={{ isSignedIn: true, user, setUser }}>
+      {children}
+    </MockUserContext.Provider>
+  );
+}
 
 // Wrap Clerk provider with loading states
 export function ClerkProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   
+  // If no Clerk key is available, use the mock provider instead
   if (!clerkPubKey) {
-    console.warn("Missing Clerk publishable key. Authentication will not work properly.");
+    console.warn("Missing Clerk publishable key. Using development mode with mock authentication.");
+    return <MockUserProvider>{children}</MockUserProvider>;
   }
   
+  // Otherwise use the actual Clerk provider
   return (
     <BaseClerkProvider
       publishableKey={clerkPubKey}
