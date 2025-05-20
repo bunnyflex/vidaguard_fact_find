@@ -220,4 +220,25 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Import the Supabase storage implementation
+import { SupabaseStorage } from './supabaseStorage';
+
+// Choose the appropriate storage implementation based on environment
+let storage: IStorage;
+
+// If DATABASE_URL is provided, use Supabase storage, otherwise fall back to MemStorage
+if (process.env.DATABASE_URL) {
+  try {
+    storage = new SupabaseStorage(process.env.DATABASE_URL);
+    console.log('Using Supabase storage with PostgreSQL');
+  } catch (error) {
+    console.error('Failed to initialize Supabase storage:', error);
+    storage = new MemStorage();
+    console.log('Falling back to in-memory storage');
+  }
+} else {
+  storage = new MemStorage();
+  console.log('Using in-memory storage (no DATABASE_URL provided)');
+}
+
+export { storage };
