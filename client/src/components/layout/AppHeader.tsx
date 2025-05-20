@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, SignOutButton, SignInButton } from "@clerk/clerk-react";
+import { SignOutButton, SignInButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useMockUser } from "@/components/auth/ClerkProvider";
+import { useUser } from "@/components/auth/ClerkProvider";
+import { Badge } from "@/components/ui/badge";
 
 export default function AppHeader() {
   const [location] = useLocation();
@@ -18,12 +19,8 @@ export default function AppHeader() {
   // Check if Clerk is available via publishable key
   const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   
-  // Use Clerk or mock authentication based on availability
-  const clerkAuth = clerkAvailable ? useUser() : { isSignedIn: false, user: null };
-  const mockAuth = useMockUser();
-  
-  // Use the appropriate auth source
-  const { isSignedIn, user } = clerkAvailable ? clerkAuth : mockAuth;
+  // Use our universal authentication hook that works in both environments
+  const { isSignedIn, user, signIn, signOut } = useUser();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -42,23 +39,17 @@ export default function AppHeader() {
       .toUpperCase();
   };
   
-  // Mock sign-in function when Clerk is not available
-  const handleMockSignIn = () => {
-    if (!clerkAvailable && mockAuth.setUser) {
-      mockAuth.setUser({
-        id: "mock-user-123",
-        fullName: "Test User",
-        firstName: "Test",
-        lastName: "User",
-        emailAddresses: [{ emailAddress: "test@example.com" }]
-      });
+  // Handle sign-in for both development and production modes
+  const handleSignIn = () => {
+    if (!clerkAvailable) {
+      signIn();
     }
   };
   
-  // Mock sign-out function when Clerk is not available
-  const handleMockSignOut = () => {
-    if (!clerkAvailable && mockAuth.setUser) {
-      mockAuth.setUser(null);
+  // Handle sign-out for both development and production modes
+  const handleSignOut = () => {
+    if (!clerkAvailable) {
+      signOut();
     }
   };
 
@@ -71,6 +62,11 @@ export default function AppHeader() {
               <span className="text-primary-foreground font-bold">I</span>
             </div>
             <h1 className="font-bold text-xl">InsureAI</h1>
+            {!clerkAvailable && (
+              <Badge variant="outline" className="ml-2 bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-800">
+                Development Mode
+              </Badge>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -114,7 +110,7 @@ export default function AppHeader() {
                       {clerkAvailable ? (
                         <SignOutButton>Sign out</SignOutButton>
                       ) : (
-                        <button onClick={handleMockSignOut}>Sign out</button>
+                        <button onClick={handleSignOut}>Sign out</button>
                       )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -128,7 +124,7 @@ export default function AppHeader() {
                       </Button>
                     </SignInButton>
                   ) : (
-                    <Button variant="default" size="sm" onClick={handleMockSignIn}>
+                    <Button variant="default" size="sm" onClick={handleSignIn}>
                       Sign In (Development)
                     </Button>
                   )}

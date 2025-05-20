@@ -28,19 +28,13 @@ export default function Home() {
     setShowSignature(false);
   };
 
-  // Get the setUser function directly from our ClerkProvider context
-  const { setUser } = useUser() as any;
+  // Get the sign-in function from our authentication hook
+  const { signIn } = useUser();
   
   // Mock sign-in function when Clerk is not available
   const handleMockSignIn = () => {
-    if (!clerkAvailable && setUser) {
-      setUser({
-        id: "mock-user-123",
-        fullName: "Test User",
-        firstName: "Test",
-        lastName: "User",
-        emailAddresses: [{ emailAddress: "test@example.com" }]
-      });
+    if (!clerkAvailable) {
+      signIn();
     }
   };
 
