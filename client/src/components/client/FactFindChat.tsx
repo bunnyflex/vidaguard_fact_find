@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Question } from "@shared/schema";
-import { useMockUser } from "@/components/auth/ClerkProvider";
+import { useUser } from "@/components/auth/ClerkProvider";
 
 interface FactFindChatProps {
   onComplete: (sessionId: number, answers: Array<{ question: string; answer: string }>) => void;
@@ -24,14 +24,8 @@ type Message = {
 };
 
 export default function FactFindChat({ onComplete }: FactFindChatProps) {
-  // Check if Clerk is available via publishable key
-  const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-  
-  // Use mock authentication in development mode
-  const mockAuth = useMockUser();
-  
-  // Get user from mock auth
-  const { user } = mockAuth;
+  // Use mock authentication directly - it will handle both dev and production modes
+  const { user } = useMockUser();
   
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);

@@ -4,7 +4,7 @@ import SignatureCanvas from "react-signature-canvas";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { useMockUser } from "@/components/auth/ClerkProvider";
+import { useUser } from "@/components/auth/ClerkProvider";
 import {
   Accordion,
   AccordionContent,
@@ -19,14 +19,8 @@ interface SignatureViewProps {
 }
 
 export default function SignatureView({ sessionId, answers, onGoBack }: SignatureViewProps) {
-  // Check if Clerk is available via publishable key
-  const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-  
-  // Use mock authentication in development mode
-  const mockAuth = useMockUser();
-  
-  // Get user from mock auth
-  const { user } = mockAuth;
+  // Use mock authentication directly - it will handle both dev and production modes
+  const { user } = useMockUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);

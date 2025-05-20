@@ -1,10 +1,11 @@
-import { ClerkProvider as BaseClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/clerk-react";
+import { ClerkProvider as BaseClerkProvider, ClerkLoaded, ClerkLoading, useUser as useClerkUser } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 import { useTheme } from "@/components/ui/theme-provider";
 import { createContext, useContext, useState } from "react";
 
 // Get the Clerk publishable key from environment
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+const devMode = !clerkPubKey;
 
 // Create a mock user context for development without Clerk
 interface MockUserContextType {
@@ -25,21 +26,29 @@ const MockUserContext = createContext<MockUserContextType>({
   setUser: () => {}
 });
 
+// Combined hook that works with or without Clerk
+export function useUser() {
+  // If in dev mode, use our mock implementation
+  if (devMode) {
+    return useMockUser();
+  }
+  
+  // Otherwise use the real Clerk implementation
+  return useClerkUser();
+}
+
 // Hook to access mock user
 export const useMockUser = () => useContext(MockUserContext);
 
 // Mock user provider when no Clerk key is available
 function MockUserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState({
-    id: "dev-user-123",
-    fullName: "Test User",
-    firstName: "Test",
-    lastName: "User",
-    emailAddresses: [{ emailAddress: "test@example.com" }]
-  });
+  const [user, setUser] = useState<MockUserContextType["user"]>(null);
+  
+  // In development mode, we consider a null user as not signed in
+  const isSignedIn = !!user;
 
   return (
-    <MockUserContext.Provider value={{ isSignedIn: true, user, setUser }}>
+    <MockUserContext.Provider value={{ isSignedIn, user, setUser }}>
       {children}
     </MockUserContext.Provider>
   );
