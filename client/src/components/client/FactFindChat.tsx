@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -28,12 +27,11 @@ export default function FactFindChat({ onComplete }: FactFindChatProps) {
   // Check if Clerk is available via publishable key
   const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   
-  // Use Clerk or mock authentication based on availability
-  const clerkAuth = clerkAvailable ? useUser() : { user: null };
+  // Use mock authentication in development mode
   const mockAuth = useMockUser();
   
-  // Use the appropriate auth source
-  const { user } = clerkAvailable ? clerkAuth : mockAuth;
+  // Get user from mock auth
+  const { user } = mockAuth;
   
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);

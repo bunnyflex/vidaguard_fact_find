@@ -129,7 +129,7 @@ export default function AppHeader() {
                     </SignInButton>
                   ) : (
                     <Button variant="default" size="sm" onClick={handleMockSignIn}>
-                      Sign In (Dev)
+                      Sign In (Development)
                     </Button>
                   )}
                 </>
