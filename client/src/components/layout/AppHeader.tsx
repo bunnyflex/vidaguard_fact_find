@@ -177,7 +177,7 @@ export default function AppHeader() {
                     <Button className="w-full">Sign In</Button>
                   </SignInButton>
                 ) : (
-                  <Button className="w-full" onClick={handleMockSignIn}>
+                  <Button className="w-full" onClick={handleSignIn}>
                     Sign In (Development Mode)
                   </Button>
                 )}
@@ -195,7 +195,7 @@ export default function AppHeader() {
                     </Button>
                   </SignOutButton>
                 ) : (
-                  <Button variant="outline" className="w-full mt-2" onClick={handleMockSignOut}>
+                  <Button variant="outline" className="w-full mt-2" onClick={handleSignOut}>
                     Sign Out (Development)
                   </Button>
                 )}
