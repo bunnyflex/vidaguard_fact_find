@@ -19,8 +19,8 @@ interface SignatureViewProps {
 }
 
 export default function SignatureView({ sessionId, answers, onGoBack }: SignatureViewProps) {
-  // Use mock authentication directly - it will handle both dev and production modes
-  const { user } = useMockUser();
+  // Use our custom authentication hook that works in both environments
+  const { user } = useUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);

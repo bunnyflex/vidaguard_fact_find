@@ -18,12 +18,16 @@ interface MockUserContextType {
     emailAddresses: { emailAddress: string }[];
   } | null;
   setUser: (user: any) => void;
+  signIn: () => void;
+  signOut: () => void;
 }
 
 const MockUserContext = createContext<MockUserContextType>({
   isSignedIn: false,
   user: null,
-  setUser: () => {}
+  setUser: () => {},
+  signIn: () => {},
+  signOut: () => {}
 });
 
 // Combined hook that works with or without Clerk
@@ -34,7 +38,13 @@ export function useUser() {
   }
   
   // Otherwise use the real Clerk implementation
-  return useClerkUser();
+  try {
+    return useClerkUser();
+  } catch (error) {
+    // If Clerk throws an error (not properly initialized), fallback to mock
+    console.warn("Clerk error, falling back to mock authentication:", error);
+    return useMockUser();
+  }
 }
 
 // Hook to access mock user
@@ -46,9 +56,31 @@ function MockUserProvider({ children }: { children: React.ReactNode }) {
   
   // In development mode, we consider a null user as not signed in
   const isSignedIn = !!user;
+  
+  // Allow direct sign-in for development
+  const handleMockSignIn = () => {
+    setUser({
+      id: "mock-user-123",
+      fullName: "Test User",
+      firstName: "Test",
+      lastName: "User",
+      emailAddresses: [{ emailAddress: "test@example.com" }]
+    });
+  };
+  
+  // Allow sign-out for development
+  const handleMockSignOut = () => {
+    setUser(null);
+  };
 
   return (
-    <MockUserContext.Provider value={{ isSignedIn, user, setUser }}>
+    <MockUserContext.Provider value={{ 
+      isSignedIn, 
+      user, 
+      setUser,
+      signIn: handleMockSignIn,
+      signOut: handleMockSignOut
+    }}>
       {children}
     </MockUserContext.Provider>
   );

@@ -24,8 +24,8 @@ type Message = {
 };
 
 export default function FactFindChat({ onComplete }: FactFindChatProps) {
-  // Use mock authentication directly - it will handle both dev and production modes
-  const { user } = useMockUser();
+  // Use our custom authentication hook that works in both environments
+  const { user } = useUser();
   
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);

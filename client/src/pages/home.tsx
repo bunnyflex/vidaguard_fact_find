@@ -1,22 +1,18 @@
 import { useState } from "react";
-import { useUser, SignInButton } from "@clerk/clerk-react";
+import { SignInButton } from "@clerk/clerk-react";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import FactFindChat from "@/components/client/FactFindChat";
 import SignatureView from "@/components/client/SignatureView";
 import { Button } from "@/components/ui/button";
-import { useMockUser } from "@/components/auth/ClerkProvider";
+import { useUser } from "@/components/auth/ClerkProvider";
 
 export default function Home() {
   // Check if Clerk is available via publishable key
   const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   
-  // Use Clerk or mock authentication based on availability
-  const clerkAuth = clerkAvailable ? useUser() : { isSignedIn: false };
-  const mockAuth = useMockUser();
-  
-  // Use the appropriate auth source
-  const { isSignedIn } = clerkAvailable ? clerkAuth : mockAuth;
+  // Use our custom hook that works in both environments
+  const { isSignedIn, user } = useUser();
   
   const [showSignature, setShowSignature] = useState(false);
   const [answers, setAnswers] = useState<Array<{ question: string; answer: string }>>([]);
@@ -32,10 +28,13 @@ export default function Home() {
     setShowSignature(false);
   };
 
+  // Get the setUser function directly from our ClerkProvider context
+  const { setUser } = useUser() as any;
+  
   // Mock sign-in function when Clerk is not available
   const handleMockSignIn = () => {
-    if (!clerkAvailable && mockAuth.setUser) {
-      mockAuth.setUser({
+    if (!clerkAvailable && setUser) {
+      setUser({
         id: "mock-user-123",
         fullName: "Test User",
         firstName: "Test",
