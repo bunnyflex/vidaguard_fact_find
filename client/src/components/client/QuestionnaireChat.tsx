@@ -876,26 +876,44 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
 
               {state.question.type === "checkbox-multiple" && state.question.options && (
                 <div className="space-y-4">
-                  <div className="space-y-3">
+                  <div className="space-y-3 p-1">
                     {state.question.options.map((option) => (
-                      <motion.div key={option} variants={optionVariants} className="flex items-center space-x-2">
+                      <motion.div 
+                        key={option} 
+                        variants={optionVariants} 
+                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
                         <Checkbox
                           id={`checkbox-${option}`}
                           checked={checkboxValues[option] || false}
                           onCheckedChange={(checked) => handleCheckboxChange(option, checked === true)}
+                          className="border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <Label htmlFor={`checkbox-${option}`}>{option}</Label>
+                        <Label 
+                          htmlFor={`checkbox-${option}`}
+                          className="cursor-pointer select-none flex-1"
+                        >
+                          {option}
+                        </Label>
                       </motion.div>
                     ))}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleNextQuestion}
-                    className="ml-auto block"
-                  >
-                    Continue
-                  </Button>
+                  <div className="flex justify-between items-center">
+                    {!Object.values(checkboxValues).some(v => v === true) && 
+                      <span className="text-xs text-red-500">Please select at least one option</span>
+                    }
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleNextQuestion}
+                      disabled={!Object.values(checkboxValues).some(v => v === true)}
+                      className={Object.values(checkboxValues).some(v => v === true) ? "ml-auto block border-green-200 hover:border-green-300" : "ml-auto block"}
+                    >
+                      Continue
+                    </Button>
+                  </div>
                 </div>
               )}
             </motion.div>
