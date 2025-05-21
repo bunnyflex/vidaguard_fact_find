@@ -66,14 +66,14 @@ export default function AppHeader() {
           {/* Desktop navigation */}
           <nav className="hidden lg:flex items-center gap-6">
             <Link href="/">
-              <a className={`text-sm font-medium transition-colors hover:text-primary ${location === "/" ? "text-primary" : ""}`}>
+              <span className={`text-sm font-medium transition-colors hover:text-primary ${location === "/" ? "text-primary" : ""}`}>
                 Dashboard
-              </a>
+              </span>
             </Link>
             <Link href="/admin">
-              <a className={`text-sm font-medium transition-colors hover:text-primary ${location === "/admin" ? "text-primary" : ""}`}>
+              <span className={`text-sm font-medium transition-colors hover:text-primary ${location === "/admin" ? "text-primary" : ""}`}>
                 Admin
-              </a>
+              </span>
             </Link>
             <a href="#" className="text-sm font-medium transition-colors hover:text-primary">
               Help
@@ -114,12 +114,12 @@ export default function AppHeader() {
         <div className="fixed inset-y-0 left-0 z-40 w-72 bg-background shadow-lg">
           <div className="flex h-16 items-center border-b px-6">
             <Link href="/">
-              <a className="flex items-center gap-2 font-semibold">
+              <div className="flex items-center gap-2 font-semibold">
                 <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-xs">I</span>
                 </div>
                 <span>InsureAI</span>
-              </a>
+              </div>
             </Link>
             <button className="ml-auto rounded-md p-1" onClick={closeMobileMenu}>
               <i className="fas fa-times text-lg"></i>
@@ -128,21 +128,21 @@ export default function AppHeader() {
           </div>
           <nav className="grid gap-2 p-4">
             <Link href="/">
-              <a className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary ${location === "/" ? "bg-secondary" : ""}`}>
+              <div className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary ${location === "/" ? "bg-secondary" : ""}`}>
                 <i className="fas fa-home text-muted-foreground"></i>
                 <span>Dashboard</span>
-              </a>
+              </div>
             </Link>
             <Link href="/admin">
-              <a className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary ${location === "/admin" ? "bg-secondary" : ""}`}>
+              <div className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary ${location === "/admin" ? "bg-secondary" : ""}`}>
                 <i className="fas fa-cog text-muted-foreground"></i>
                 <span>Admin</span>
-              </a>
+              </div>
             </Link>
-            <a href="#" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary">
+            <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary">
               <i className="fas fa-question-circle text-muted-foreground"></i>
               <span>Help</span>
-            </a>
+            </div>
             {!isSignedIn && (
               <div className="mt-4">
                 <Button className="w-full" onClick={signIn}>
