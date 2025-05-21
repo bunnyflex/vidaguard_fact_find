@@ -55,52 +55,425 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const sampleQuestions = [
           {
-            text: "What is your full name?",
-            type: "text",
-            placeholder: "Enter your full name",
+            text: "Are you UK domiciled and a UK tax resident?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
             order: 1,
           },
           {
-            text: "What is your age?",
-            type: "number",
-            placeholder: "Enter your age",
+            text: "What is your marital status?",
+            type: "text",
+            placeholder: "Enter your marital status",
             order: 2,
           },
           {
-            text: "What type of insurance are you looking for?",
-            type: "multiple-choice",
-            options: ["Home Insurance", "Auto Insurance", "Life Insurance", "Health Insurance", "Travel Insurance"],
+            text: "What is your relationship to the other applicant (if applicable)?",
+            type: "text",
+            placeholder: "Leave blank if not applicable",
             order: 3,
           },
           {
-            text: "Do you currently have any insurance policies?",
+            text: "Do you have any dependents?",
             type: "multiple-choice",
             options: ["Yes", "No"],
             order: 4,
           },
           {
-            text: "Which of the following risks are you concerned about?",
-            type: "checkbox-multiple",
-            options: ["Property damage", "Theft", "Medical emergencies", "Liability", "Natural disasters"],
+            text: "If yes, how many dependents do you have? (under 18)",
+            type: "number",
+            placeholder: "Enter number",
             order: 5,
             dependsOn: {
-              questionId: 3,
-              value: "Home Insurance"
+              questionId: 4,
+              value: "Yes"
             }
           },
           {
-            text: "What is your annual household income?",
-            type: "number",
-            placeholder: "Enter amount",
-            prefix: "$",
+            text: "How old are your dependents?",
+            type: "text",
+            placeholder: "e.g., 5, 8, 12",
             order: 6,
+            dependsOn: {
+              questionId: 4,
+              value: "Yes"
+            }
           },
           {
-            text: "Please describe any specific concerns you have about your insurance needs:",
+            text: "What is your occupation?",
             type: "text",
-            placeholder: "Enter your concerns here...",
+            placeholder: "Enter your job title",
             order: 7,
-          }
+          },
+          {
+            text: "What is your employment status?",
+            type: "multiple-choice",
+            options: ["Employed", "Self-Employed", "Unemployed"],
+            order: 8,
+          },
+          {
+            text: "If unemployed, please explain why.",
+            type: "text",
+            placeholder: "Provide details",
+            order: 9,
+            dependsOn: {
+              questionId: 8,
+              value: "Unemployed"
+            }
+          },
+          {
+            text: "Do you smoke?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 10,
+          },
+          {
+            text: "If no, have you smoked in the last 12 months?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 11,
+            dependsOn: {
+              questionId: 10,
+              value: "No"
+            }
+          },
+          {
+            text: "Are you classed as vulnerable?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 12,
+          },
+          {
+            text: "If yes, please explain your vulnerability.",
+            type: "text",
+            placeholder: "Provide details",
+            order: 13,
+            dependsOn: {
+              questionId: 12,
+              value: "Yes"
+            }
+          },
+          {
+            text: "Are you currently taking any medication?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 14,
+          },
+          {
+            text: "If yes, please list the medication you are taking.",
+            type: "text",
+            placeholder: "List medications",
+            order: 15,
+            dependsOn: {
+              questionId: 14,
+              value: "Yes"
+            }
+          },
+          {
+            text: "Do you do any exercise?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 16,
+          },
+          {
+            text: "What is your height?",
+            type: "number",
+            placeholder: "Height in cm",
+            suffix: "cm",
+            order: 17,
+          },
+          {
+            text: "What is your weight?",
+            type: "number",
+            placeholder: "Weight in kg",
+            suffix: "kg",
+            order: 18,
+          },
+          {
+            text: "Are any of the following of interest to you?",
+            type: "checkbox-multiple",
+            options: ["Life Insurance", "Critical Illness Cover", "Income Protection", "Mortgage Protection", "Pensions", "Investments", "Other"],
+            order: 19,
+          },
+          {
+            text: "If you selected 'Other', please specify:",
+            type: "text",
+            placeholder: "Enter details",
+            order: 20,
+            dependsOn: {
+              questionId: 19,
+              value: "Other"
+            }
+          },
+          {
+            text: "Is there anything else you would like to add?",
+            type: "text",
+            placeholder: "Enter any additional information",
+            order: 21,
+          },
+          {
+            text: "What is your gross annual income?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 22,
+          },
+          {
+            text: "Monthly take home pay",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 23,
+          },
+          {
+            text: "Do you have any other income?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 24,
+          },
+          {
+            text: "Please specify amount and source of other income",
+            type: "text",
+            placeholder: "E.g. £500 Child Support",
+            order: 25,
+            dependsOn: {
+              questionId: 24,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What are your monthly mortgage costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 26,
+          },
+          {
+            text: "What are your monthly rental costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 27,
+          },
+          {
+            text: "What are your monthly household bills?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 28,
+          },
+          {
+            text: "What are your monthly gym/sports club costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 29,
+          },
+          {
+            text: "What are your monthly insurance costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 30,
+          },
+          {
+            text: "What are your monthly overdraft, loans, credit card costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 31,
+          },
+          {
+            text: "What are your monthly food/clothes costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 32,
+          },
+          {
+            text: "What are your monthly entertainment costs?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 33,
+          },
+          {
+            text: "Do you have any other monthly costs?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 34,
+          },
+          {
+            text: "Please specify amount and details of other costs",
+            type: "text",
+            placeholder: "E.g. £100 for pet care",
+            order: 35,
+            dependsOn: {
+              questionId: 34,
+              value: "Yes"
+            }
+          },
+          {
+            text: "Please provide details of any Loans/Overdrafts/Credit Cards/IVA/Debt Management",
+            type: "text",
+            placeholder: "Enter details",
+            order: 36,
+          },
+          {
+            text: "If you were off work due to sickness/accident, what would you receive?",
+            type: "text",
+            placeholder: "Enter details",
+            order: 37,
+          },
+          {
+            text: "Is this SSP (Statutory Sick Pay)?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 38,
+          },
+          {
+            text: "Do you have Death in Service benefit at work?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 39,
+          },
+          {
+            text: "Are you paying into a pension (Company/Personal)?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 40,
+          },
+          {
+            text: "What is your National Insurance number?",
+            type: "text",
+            placeholder: "E.g. AB123456C",
+            order: 41,
+          },
+          {
+            text: "Do you have any other Life Insurances in place?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 42,
+          },
+          {
+            text: "What insurance company is your policy with?",
+            type: "text",
+            placeholder: "Enter company name",
+            order: 43,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What is the sum assured amount?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 44,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What is the term remaining on your policy?",
+            type: "text",
+            placeholder: "E.g. 15 years",
+            order: 45,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What is your monthly premium?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 46,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What is your cover level?",
+            type: "multiple-choice",
+            options: ["Level", "Increasing", "Decreasing"],
+            order: 47,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "What is your premium type?",
+            type: "multiple-choice",
+            options: ["Guaranteed", "Reviewable"],
+            order: 48,
+            dependsOn: {
+              questionId: 42,
+              value: "Yes"
+            }
+          },
+          {
+            text: "Do you have Buildings/Contents Insurance?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 49,
+          },
+          {
+            text: "What is your current rent amount?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 50,
+          },
+          {
+            text: "What are your current mortgage payments?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 51,
+          },
+          {
+            text: "What is the remaining term on your mortgage?",
+            type: "text",
+            placeholder: "E.g. 20 years",
+            order: 52,
+          },
+          {
+            text: "What is the outstanding balance on your mortgage?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 53,
+          },
+          {
+            text: "Is your mortgage Interest Only or Repayment?",
+            type: "multiple-choice",
+            options: ["Interest Only", "Repayment"],
+            order: 54,
+          },
+          {
+            text: "Is your mortgage Single or Joint?",
+            type: "multiple-choice",
+            options: ["Single", "Joint"],
+            order: 55,
+          },
+          {
+            text: "How much do you have in savings or investments?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "£",
+            order: 56,
+          },
+          {
+            text: "Please provide any additional notes or information you feel is relevant",
+            type: "text",
+            placeholder: "Enter additional information",
+            order: 57,
+          },
         ];
         
         // Add each sample question
