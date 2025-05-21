@@ -689,11 +689,46 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
     visible: { opacity: 1, y: 0 },
   }
 
+  // Calculate progress percentage
+  const calculateProgress = () => {
+    if (questions.length === 0) return 0
+    const percentage = (currentQuestionIndex / questions.length) * 100
+    return Math.min(100, Math.max(0, percentage))
+  }
+
+  // Validate input based on question type
+  const isInputValid = () => {
+    if (!state.question) return false
+    
+    switch (state.question.type) {
+      case "text":
+        return textInput.trim().length > 0
+      case "number":
+        return numberInput.trim().length > 0 && !isNaN(Number(numberInput))
+      case "multiple-choice":
+        return !!answers[state.question.id]
+      case "checkbox-multiple":
+        return Object.values(checkboxValues).some(v => v === true)
+      default:
+        return true
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
+      {/* Progress bar */}
+      <div className="h-1 bg-gray-100 dark:bg-gray-800 w-full">
+        <motion.div 
+          className="h-full bg-gradient-to-r from-blue-400 to-primary"
+          initial={{ width: "0%" }}
+          animate={{ width: `${calculateProgress()}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+    
       {/* Chat container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {/* Intro or AI message */}
           {(state.isIntro || state.question) && (
             <motion.div
@@ -740,6 +775,7 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
               initial="hidden"
               animate="visible"
               key={`options-${state.question.id}`}
+              layout
             >
               {state.question.type === "multiple-choice" && state.question.options && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -759,26 +795,46 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
 
               {state.question.type === "text" && (
                 <div className="space-y-2">
-                  <Textarea
-                    placeholder={state.question.placeholder}
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleNextQuestion();
+                  <div className="relative">
+                    <Textarea
+                      placeholder={state.question.placeholder}
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && textInput.trim().length > 0) {
+                          e.preventDefault();
+                          handleNextQuestion();
+                        }
+                      }}
+                      className={`w-full border-2 ${
+                        textInput.trim() === '' ? 'border-red-200 focus:border-red-300' : 'border-green-200 focus:border-green-300'
+                      } transition-colors duration-200`}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: textInput.trim() ? 1 : 0, y: textInput.trim() ? 0 : 10 }}
+                      className="absolute right-3 top-3 text-green-500"
+                    >
+                      {textInput.trim() && <Check className="h-4 w-4" />}
+                    </motion.div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      {textInput.trim() === '' && 
+                        <span className="text-red-500">This field is required</span>
                       }
-                    }}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-gray-500 text-right">Press Enter to continue</div>
+                    </div>
+                    <div className="text-xs text-gray-500">Press Enter to continue</div>
+                  </div>
                 </div>
               )}
 
               {state.question.type === "number" && (
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    {state.question.prefix && <span className="text-gray-500">{state.question.prefix}</span>}
+                  <div className="relative flex items-center space-x-2">
+                    {state.question.prefix && (
+                      <span className="text-gray-500 absolute left-3 z-10">{state.question.prefix}</span>
+                    )}
                     <Input
                       ref={inputRef}
                       type="number"
@@ -786,16 +842,35 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
                       value={numberInput}
                       onChange={(e) => setNumberInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === 'Enter' && numberInput.trim().length > 0) {
                           e.preventDefault();
                           handleNextQuestion();
                         }
                       }}
-                      className="w-full"
+                      className={`w-full ${state.question.prefix ? 'pl-6' : ''} border-2 ${
+                        numberInput.trim() === '' ? 'border-red-200 focus:border-red-300' : 'border-green-200 focus:border-green-300'
+                      } transition-colors duration-200`}
                     />
                     {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ 
+                        opacity: numberInput.trim() ? 1 : 0, 
+                        scale: numberInput.trim() ? 1 : 0.8 
+                      }}
+                      className="absolute right-3 text-green-500"
+                    >
+                      {numberInput.trim() && <Check className="h-4 w-4" />}
+                    </motion.div>
                   </div>
-                  <div className="text-xs text-gray-500 text-right">Press Enter to continue</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      {numberInput.trim() === '' && 
+                        <span className="text-red-500">This field is required</span>
+                      }
+                    </div>
+                    <div className="text-xs text-gray-500">Press Enter to continue</div>
+                  </div>
                 </div>
               )}
 
