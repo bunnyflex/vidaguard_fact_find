@@ -24,7 +24,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="insuranceai-theme">
+      <ThemeProvider defaultTheme="light" storageKey="vidaguard-theme">
         <ClerkProvider>
           <TooltipProvider>
             <Toaster />

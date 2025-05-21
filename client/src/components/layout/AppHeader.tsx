@@ -44,9 +44,9 @@ export default function AppHeader() {
         <div className="flex flex-1 items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">I</span>
+              <span className="text-primary-foreground font-bold">V</span>
             </div>
-            <h1 className="font-bold text-xl">InsureAI</h1>
+            <h1 className="font-bold text-xl">Vidaguard Fact-Find</h1>
             {devMode && (
               <Badge variant="outline" className="ml-2 bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-800">
                 Development Mode
@@ -118,7 +118,7 @@ export default function AppHeader() {
                 <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-xs">I</span>
                 </div>
-                <span>InsureAI</span>
+                <span>Vidaguard Fact-Find</span>
               </div>
             </Link>
             <button className="ml-auto rounded-md p-1" onClick={closeMobileMenu}>

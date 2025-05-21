@@ -34,7 +34,7 @@ export default function Home() {
       <main className="flex-1 container mx-auto px-4 py-6">
         {!isSignedIn ? (
           <div className="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center">
-            <h2 className="text-2xl font-bold mb-4">Welcome to InsureAI</h2>
+            <h2 className="text-2xl font-bold mb-4">Welcome to Vidaguard Fact-Find</h2>
             <p className="mb-6 text-gray-600 dark:text-gray-300">
               Please sign in to start or continue your insurance fact find process.
             </p>
@@ -48,7 +48,7 @@ export default function Home() {
             {!showSignature ? (
               <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden h-[calc(100vh-240px)]">
                 <div className="border-b p-4">
-                  <h2 className="text-xl font-semibold">Insurance Fact Find</h2>
+                  <h2 className="text-xl font-semibold">Vidaguard Fact Find</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Please answer the following questions to help us understand your insurance needs.
                   </p>
