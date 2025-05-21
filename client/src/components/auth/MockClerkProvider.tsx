@@ -1,6 +1,3 @@
-// This is a mock replacement for Clerk authentication
-// We're providing a simplified version since we've disabled auth requirements
-
 import React, { createContext, useContext } from 'react';
 
 // Create a mock user context
@@ -34,7 +31,7 @@ const UserContext = createContext<UserContextType>({
 
 export const useUser = () => useContext(UserContext);
 
-export function ClerkProvider({ children }: { children: React.ReactNode }) {
+export function MockClerkProvider({ children }: { children: React.ReactNode }) {
   // In development mode, always return a signed-in user
   const value = {
     isSignedIn: true,
