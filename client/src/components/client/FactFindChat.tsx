@@ -27,6 +27,9 @@ export default function FactFindChat({ onComplete }: FactFindChatProps) {
   // Use our custom authentication hook that works in both environments
   const { user } = useUser();
   
+  // Development mode check
+  const devMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState("");
@@ -46,7 +49,8 @@ export default function FactFindChat({ onComplete }: FactFindChatProps) {
   // Generate AI message
   const aiMutation = useMutation({
     mutationFn: async (messages: Array<{ role: string; content: string }>) => {
-      return apiRequest("POST", "/api/ai/generate", { messages });
+      const response = await apiRequest("POST", "/api/ai/generate", { messages });
+      return response;
     },
     onSuccess: (data) => {
       appendMessage({
