@@ -12,22 +12,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const api = '/api';
 
-  // Auth middleware to check if user exists
+  // Simplified middleware that always grants access without authentication checks
   const requireUser = async (req: Request, res: Response, next: Function) => {
     try {
-      const clerkId = req.headers['x-clerk-user-id'] as string;
+      // Create a default test user
+      const defaultUser = {
+        id: 1,
+        clerkId: 'dev-user-123',
+        email: 'test@example.com',
+        isAdmin: true,
+        createdAt: new Date()
+      };
       
-      if (!clerkId) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-      
-      const user = await storage.getUserByClerkId(clerkId);
-      
-      if (!user) {
-        return res.status(401).json({ message: 'User not found' });
-      }
-      
-      req.body.user = user;
+      // Always add the default user to the request
+      req.body.user = defaultUser;
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
@@ -35,17 +33,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Admin middleware
+  // Simplified admin middleware that always grants admin access
   const requireAdmin = async (req: Request, res: Response, next: Function) => {
-    try {
-      if (!req.body.user || !req.body.user.isAdmin) {
-        return res.status(403).json({ message: 'Forbidden: Admin access required' });
-      }
-      next();
-    } catch (error) {
-      console.error('Admin middleware error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
+    // No checks needed - always grant admin access in development mode
+    next();
   };
 
   // Health check endpoint

@@ -20,12 +20,11 @@ export function useFactFind() {
   // Create a new session
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/sessions", {}, {
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
+      return apiRequest("POST", "/api/sessions", {
+        userId: user?.id,
+        email: user?.emailAddresses?.[0]?.emailAddress,
+        status: "in-progress",
       });
-      return await response.json();
     },
     onSuccess: (data) => {
       setSessionId(data.id);
@@ -37,20 +36,14 @@ export function useFactFind() {
     mutationFn: async ({ questionId, value }: { questionId: number; value: string }) => {
       if (!sessionId) throw new Error("No active session");
       
-      const response = await apiRequest(
+      return apiRequest(
         "POST", 
         `/api/sessions/${sessionId}/answers`, 
         {
           questionId,
           value,
-        },
-        {
-          headers: {
-            "x-clerk-user-id": user?.id || "",
-          },
         }
       );
-      return await response.json();
     },
     onSuccess: (data) => {
       setAnswers((prev) => {
@@ -74,11 +67,7 @@ export function useFactFind() {
       
       try {
         setIsLoading(true);
-        const response = await fetch("/api/sessions", {
-          headers: {
-            "x-clerk-user-id": user.id,
-          },
-        });
+        const response = await fetch("/api/sessions");
         
         if (response.ok) {
           const sessions = await response.json();
@@ -90,11 +79,7 @@ export function useFactFind() {
             setSessionId(incompleteSession.id);
             
             // Fetch answers for this session
-            const answersResponse = await fetch(`/api/sessions/${incompleteSession.id}`, {
-              headers: {
-                "x-clerk-user-id": user.id,
-              },
-            });
+            const answersResponse = await fetch(`/api/sessions/${incompleteSession.id}`);
             
             if (answersResponse.ok) {
               const data = await answersResponse.json();
@@ -129,11 +114,7 @@ export function useFactFind() {
     if (!sessionId) return [];
     
     try {
-      const response = await fetch(`/api/sessions/${sessionId}`, {
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
-      });
+      const response = await fetch(`/api/sessions/${sessionId}`);
       
       if (response.ok) {
         const data = await response.json();

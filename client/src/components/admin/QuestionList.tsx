@@ -36,11 +36,7 @@ export default function QuestionList({ onAddQuestion, onEditQuestion }: Question
   // Delete question mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/questions/${id}`, undefined, {
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
-      });
+      return apiRequest("DELETE", `/api/questions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
