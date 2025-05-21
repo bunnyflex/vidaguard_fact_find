@@ -92,24 +92,32 @@ export default function VisualQuestionEditor() {
     },
   });
 
-  // Create question mutation
+  // Create/update question mutation
   const createMutation = useMutation({
     mutationFn: async (questionData: any) => {
-      return apiRequest("POST", "/api/questions", questionData);
+      // If we're editing, update the question instead of creating a new one
+      if (editingQuestionId) {
+        return apiRequest("PATCH", `/api/questions/${editingQuestionId}`, questionData);
+      } else {
+        return apiRequest("POST", "/api/questions", questionData);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
       setIsAddingQuestion(false);
+      setEditingQuestionId(null);
       resetNewQuestion();
       toast({
-        title: "Question created",
-        description: "The question has been added successfully.",
+        title: editingQuestionId ? "Question updated" : "Question created",
+        description: editingQuestionId 
+          ? "The question has been updated successfully." 
+          : "The question has been added successfully.",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to create question: ${error.message}`,
+        description: `Failed to ${editingQuestionId ? 'update' : 'create'} question: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -300,7 +308,11 @@ export default function VisualQuestionEditor() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Question Editor</h2>
         <Button 
-          onClick={() => setIsAddingQuestion(true)}
+          onClick={() => {
+            setIsAddingQuestion(true);
+            setEditingQuestionId(null);
+            resetNewQuestion();
+          }}
           disabled={isAddingQuestion}
           className="flex items-center gap-2"
         >
@@ -312,7 +324,7 @@ export default function VisualQuestionEditor() {
       {isAddingQuestion && (
         <Card className="bg-white dark:bg-gray-800 border-2 border-primary/20 shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Create a New Question</CardTitle>
+            <CardTitle className="text-lg">{editingQuestionId ? 'Edit Question' : 'Create a New Question'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -490,6 +502,7 @@ export default function VisualQuestionEditor() {
               variant="outline" 
               onClick={() => {
                 setIsAddingQuestion(false);
+                setEditingQuestionId(null);
                 resetNewQuestion();
               }}
             >
@@ -499,7 +512,7 @@ export default function VisualQuestionEditor() {
               onClick={handleAddQuestion}
               disabled={!newQuestion.text.trim()}
             >
-              Save Question
+              {editingQuestionId ? 'Update Question' : 'Save Question'}
             </Button>
           </CardFooter>
         </Card>
@@ -667,7 +680,23 @@ export default function VisualQuestionEditor() {
                                   variant="outline"
                                   size="sm"
                                   className="flex items-center gap-1"
-                                  onClick={() => setEditingQuestionId(question.id)}
+                                  onClick={() => {
+                                    // Set up editing the current question
+                                    setEditingQuestionId(question.id);
+                                    // Pre-populate the new question state with current question data
+                                    setNewQuestion({
+                                      text: question.text,
+                                      type: question.type,
+                                      options: Array.isArray(question.options) ? question.options : [],
+                                      order: question.order,
+                                      placeholder: question.placeholder || '',
+                                      prefix: question.prefix || '',
+                                      suffix: question.suffix || '',
+                                      dependsOn: question.dependsOn,
+                                    });
+                                    // Open the add/edit form
+                                    setIsAddingQuestion(true);
+                                  }}
                                 >
                                   <Edit3 className="h-3 w-3" />
                                   Edit
