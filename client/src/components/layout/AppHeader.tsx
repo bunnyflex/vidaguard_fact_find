@@ -116,7 +116,7 @@ export default function AppHeader() {
             <Link href="/">
               <div className="flex items-center gap-2 font-semibold">
                 <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xs">I</span>
+                  <span className="text-primary-foreground font-bold text-xs">V</span>
                 </div>
                 <span>Vidaguard Fact-Find</span>
               </div>
