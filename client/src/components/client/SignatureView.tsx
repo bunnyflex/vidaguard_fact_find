@@ -21,6 +21,9 @@ interface SignatureViewProps {
 export default function SignatureView({ sessionId, answers, onGoBack }: SignatureViewProps) {
   // Use our custom authentication hook that works in both environments
   const { user } = useUser();
+  
+  // Development mode indicator
+  const devMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
@@ -33,18 +36,11 @@ export default function SignatureView({ sessionId, answers, onGoBack }: Signatur
       await apiRequest("PUT", `/api/sessions/${sessionId}`, {
         signatureData,
         completedAt: new Date().toISOString(),
-      }, {
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
       });
 
       // Then generate PDF
       const response = await fetch(`/api/sessions/${sessionId}/pdf`, {
-        method: "POST",
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
+        method: "POST"
       });
 
       if (!response.ok) {
@@ -87,10 +83,7 @@ export default function SignatureView({ sessionId, answers, onGoBack }: Signatur
   const generateExcelMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/sessions/${sessionId}/excel`, {
-        method: "GET",
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
+        method: "GET"
       });
 
       if (!response.ok) {
