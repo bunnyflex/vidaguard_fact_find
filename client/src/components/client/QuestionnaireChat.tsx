@@ -657,9 +657,14 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
   }
 
   // Handle multiple choice selection
-  const handleOptionSelect = (value: string) => {
+  const handleOptionSelect = async (value: string) => {
     if (!state.question) return
     setAnswers((prev) => ({ ...prev, [state.question!.id]: value }))
+    
+    // Automatically proceed to the next question after a short delay
+    setTimeout(() => {
+      handleNextQuestion()
+    }, 500)
   }
 
   // Handle checkbox selection
@@ -758,38 +763,64 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
                     placeholder={state.question.placeholder}
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleNextQuestion();
+                      }
+                    }}
                     className="w-full"
                   />
+                  <div className="text-xs text-gray-500 text-right">Press Enter to continue</div>
                 </div>
               )}
 
               {state.question.type === "number" && (
-                <div className="flex items-center space-x-2">
-                  {state.question.prefix && <span className="text-gray-500">{state.question.prefix}</span>}
-                  <Input
-                    ref={inputRef}
-                    type="number"
-                    placeholder={state.question.placeholder}
-                    value={numberInput}
-                    onChange={(e) => setNumberInput(e.target.value)}
-                    className="w-full"
-                  />
-                  {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    {state.question.prefix && <span className="text-gray-500">{state.question.prefix}</span>}
+                    <Input
+                      ref={inputRef}
+                      type="number"
+                      placeholder={state.question.placeholder}
+                      value={numberInput}
+                      onChange={(e) => setNumberInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleNextQuestion();
+                        }
+                      }}
+                      className="w-full"
+                    />
+                    {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
+                  </div>
+                  <div className="text-xs text-gray-500 text-right">Press Enter to continue</div>
                 </div>
               )}
 
               {state.question.type === "checkbox-multiple" && state.question.options && (
-                <div className="space-y-3">
-                  {state.question.options.map((option) => (
-                    <motion.div key={option} variants={optionVariants} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`checkbox-${option}`}
-                        checked={checkboxValues[option] || false}
-                        onCheckedChange={(checked) => handleCheckboxChange(option, checked === true)}
-                      />
-                      <Label htmlFor={`checkbox-${option}`}>{option}</Label>
-                    </motion.div>
-                  ))}
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    {state.question.options.map((option) => (
+                      <motion.div key={option} variants={optionVariants} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`checkbox-${option}`}
+                          checked={checkboxValues[option] || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(option, checked === true)}
+                        />
+                        <Label htmlFor={`checkbox-${option}`}>{option}</Label>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleNextQuestion}
+                    className="ml-auto block"
+                  >
+                    Continue
+                  </Button>
                 </div>
               )}
             </motion.div>
