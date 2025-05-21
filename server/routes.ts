@@ -43,6 +43,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(`${api}/health`, (req, res) => {
     res.json({ status: 'ok' });
   });
+  
+  // Initialize with sample questions if none exist
+  async function seedSampleQuestions() {
+    try {
+      const questions = await storage.getQuestions();
+      
+      // Only seed if no questions exist
+      if (questions.length === 0) {
+        console.log('No questions found. Adding sample questions...');
+        
+        const sampleQuestions = [
+          {
+            text: "What is your full name?",
+            type: "text",
+            placeholder: "Enter your full name",
+            order: 1,
+          },
+          {
+            text: "What is your age?",
+            type: "number",
+            placeholder: "Enter your age",
+            order: 2,
+          },
+          {
+            text: "What type of insurance are you looking for?",
+            type: "multiple-choice",
+            options: ["Home Insurance", "Auto Insurance", "Life Insurance", "Health Insurance", "Travel Insurance"],
+            order: 3,
+          },
+          {
+            text: "Do you currently have any insurance policies?",
+            type: "multiple-choice",
+            options: ["Yes", "No"],
+            order: 4,
+          },
+          {
+            text: "Which of the following risks are you concerned about?",
+            type: "checkbox-multiple",
+            options: ["Property damage", "Theft", "Medical emergencies", "Liability", "Natural disasters"],
+            order: 5,
+            dependsOn: {
+              questionId: 3,
+              value: "Home Insurance"
+            }
+          },
+          {
+            text: "What is your annual household income?",
+            type: "number",
+            placeholder: "Enter amount",
+            prefix: "$",
+            order: 6,
+          },
+          {
+            text: "Please describe any specific concerns you have about your insurance needs:",
+            type: "text",
+            placeholder: "Enter your concerns here...",
+            order: 7,
+          }
+        ];
+        
+        // Add each sample question
+        for (const question of sampleQuestions) {
+          await storage.createQuestion(question);
+        }
+        
+        console.log('Sample questions added successfully');
+      }
+    } catch (error) {
+      console.error('Error seeding sample questions:', error);
+    }
+  }
+  
+  // Run the seeding function
+  seedSampleQuestions();
 
   // User APIs
   app.post(`${api}/users`, async (req, res) => {
