@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
-import QuestionList from "./QuestionList";
+import VisualQuestionEditor from "./VisualQuestionEditor";
 import QuestionEditor from "./QuestionEditor";
 import AISettings from "./AISettings";
 import EmailSettings from "./EmailSettings";
@@ -38,10 +38,7 @@ export default function AdminDashboard() {
         {/* Admin content area */}
         <div className="flex-1">
           {activeView === "questions" && !showQuestionEditor && (
-            <QuestionList 
-              onAddQuestion={handleAddQuestion}
-              onEditQuestion={handleEditQuestion}
-            />
+            <VisualQuestionEditor />
           )}
           
           {activeView === "questions" && showQuestionEditor && (
