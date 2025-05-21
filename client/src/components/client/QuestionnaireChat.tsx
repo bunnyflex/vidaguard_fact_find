@@ -455,8 +455,8 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
       nextIndex >= 0 &&
       nextIndex < questions.length &&
       questions[nextIndex].dependsOn &&
-      questions[nextIndex].dependsOn.questionId && 
-      (answers[questions[nextIndex].dependsOn.questionId] !== questions[nextIndex].dependsOn.value)
+      questions[nextIndex].dependsOn?.questionId !== undefined && 
+      (answers[questions[nextIndex].dependsOn?.questionId] !== questions[nextIndex].dependsOn?.value)
     ) {
       nextIndex += increment
     }
