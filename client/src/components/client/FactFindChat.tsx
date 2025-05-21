@@ -49,8 +49,7 @@ export default function FactFindChat({ onComplete }: FactFindChatProps) {
   // Generate AI message
   const aiMutation = useMutation({
     mutationFn: async (messages: Array<{ role: string; content: string }>) => {
-      const response = await apiRequest("POST", "/api/ai/generate", { messages });
-      return response;
+      return apiRequest<{ content: string; role: string }>("POST", "/api/ai/generate", { messages });
     },
     onSuccess: (data) => {
       appendMessage({
