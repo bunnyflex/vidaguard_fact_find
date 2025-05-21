@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { SignOutButton, SignInButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +16,7 @@ export default function AppHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Check if Clerk is available via publishable key
-  const clerkAvailable = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  const devMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   
   // Use our universal authentication hook that works in both environments
   const { isSignedIn, user, signIn, signOut } = useUser();
@@ -38,20 +37,6 @@ export default function AppHeader() {
       .join("")
       .toUpperCase();
   };
-  
-  // Handle sign-in for both development and production modes
-  const handleSignIn = () => {
-    if (!clerkAvailable) {
-      signIn();
-    }
-  };
-  
-  // Handle sign-out for both development and production modes
-  const handleSignOut = () => {
-    if (!clerkAvailable) {
-      signOut();
-    }
-  };
 
   return (
     <>
@@ -62,7 +47,7 @@ export default function AppHeader() {
               <span className="text-primary-foreground font-bold">I</span>
             </div>
             <h1 className="font-bold text-xl">InsureAI</h1>
-            {!clerkAvailable && (
+            {devMode && (
               <Badge variant="outline" className="ml-2 bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-800">
                 Development Mode
               </Badge>
@@ -106,28 +91,16 @@ export default function AppHeader() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>Profile</DropdownMenuItem>
-                    <DropdownMenuItem>
-                      {clerkAvailable ? (
-                        <SignOutButton>Sign out</SignOutButton>
-                      ) : (
-                        <button onClick={handleSignOut}>Sign out</button>
-                      )}
+                    <DropdownMenuItem onClick={signOut}>
+                      Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <>
-                  {clerkAvailable ? (
-                    <SignInButton mode="modal">
-                      <Button variant="default" size="sm">
-                        Sign In
-                      </Button>
-                    </SignInButton>
-                  ) : (
-                    <Button variant="default" size="sm" onClick={handleSignIn}>
-                      Sign In (Development)
-                    </Button>
-                  )}
+                  <Button variant="default" size="sm" onClick={signIn}>
+                    Sign In {devMode ? "(Development)" : ""}
+                  </Button>
                 </>
               )}
             </div>
@@ -172,15 +145,9 @@ export default function AppHeader() {
             </a>
             {!isSignedIn && (
               <div className="mt-4">
-                {clerkAvailable ? (
-                  <SignInButton mode="modal">
-                    <Button className="w-full">Sign In</Button>
-                  </SignInButton>
-                ) : (
-                  <Button className="w-full" onClick={handleSignIn}>
-                    Sign In (Development Mode)
-                  </Button>
-                )}
+                <Button className="w-full" onClick={signIn}>
+                  Sign In {devMode ? "(Development Mode)" : ""}
+                </Button>
               </div>
             )}
             {isSignedIn && (
@@ -188,17 +155,9 @@ export default function AppHeader() {
                 <div className="px-3 py-2 text-sm text-muted-foreground">
                   Signed in as: {user?.fullName || (user?.emailAddresses && user.emailAddresses[0]?.emailAddress)}
                 </div>
-                {clerkAvailable ? (
-                  <SignOutButton>
-                    <Button variant="outline" className="w-full mt-2">
-                      Sign Out
-                    </Button>
-                  </SignOutButton>
-                ) : (
-                  <Button variant="outline" className="w-full mt-2" onClick={handleSignOut}>
-                    Sign Out (Development)
-                  </Button>
-                )}
+                <Button variant="outline" className="w-full mt-2" onClick={signOut}>
+                  Sign Out {devMode ? "(Development)" : ""}
+                </Button>
               </div>
             )}
           </nav>

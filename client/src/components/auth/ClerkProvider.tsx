@@ -1,4 +1,4 @@
-import { ClerkProvider as BaseClerkProvider, ClerkLoaded, ClerkLoading, useUser as useClerkUser } from "@clerk/clerk-react";
+import { ClerkProvider as BaseClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 import { useTheme } from "@/components/ui/theme-provider";
 import { createContext, useContext, useState } from "react";
@@ -7,60 +7,45 @@ import { createContext, useContext, useState } from "react";
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 const devMode = !clerkPubKey;
 
-// Create a mock user context for development without Clerk
-interface MockUserContextType {
+// Define a common user interface both for real and mock auth
+export interface AuthUser {
+  id: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  emailAddresses: { emailAddress: string }[];
+}
+
+// Create a unified auth context with a common interface
+export interface AuthContextType {
   isSignedIn: boolean;
-  user: {
-    id: string;
-    fullName: string;
-    firstName: string;
-    lastName: string;
-    emailAddresses: { emailAddress: string }[];
-  } | null;
-  setUser: (user: any) => void;
+  user: AuthUser | null;
   signIn: () => void;
   signOut: () => void;
 }
 
-const MockUserContext = createContext<MockUserContextType>({
+// Create the auth context
+const AuthContext = createContext<AuthContextType>({
   isSignedIn: false,
   user: null,
-  setUser: () => {},
   signIn: () => {},
   signOut: () => {}
 });
 
-// Combined hook that works with or without Clerk
+// Unified hook for authentication that works in both environments
 export function useUser() {
-  // If in dev mode, use our mock implementation
-  if (devMode) {
-    return useMockUser();
-  }
-  
-  // Otherwise use the real Clerk implementation
-  try {
-    return useClerkUser();
-  } catch (error) {
-    // If Clerk throws an error (not properly initialized), fallback to mock
-    console.warn("Clerk error, falling back to mock authentication:", error);
-    return useMockUser();
-  }
+  return useContext(AuthContext);
 }
 
-// Hook to access mock user
-export const useMockUser = () => useContext(MockUserContext);
-
-// Mock user provider when no Clerk key is available
-function MockUserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<MockUserContextType["user"]>(null);
-  
-  // In development mode, we consider a null user as not signed in
+// Development mode auth provider
+function DevAuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
   const isSignedIn = !!user;
   
-  // Allow direct sign-in for development
-  const handleMockSignIn = () => {
+  // Sign in for development mode
+  const signIn = () => {
     setUser({
-      id: "mock-user-123",
+      id: "dev-user-123",
       fullName: "Test User",
       firstName: "Test",
       lastName: "User",
@@ -68,21 +53,20 @@ function MockUserProvider({ children }: { children: React.ReactNode }) {
     });
   };
   
-  // Allow sign-out for development
-  const handleMockSignOut = () => {
+  // Sign out for development mode
+  const signOut = () => {
     setUser(null);
   };
 
   return (
-    <MockUserContext.Provider value={{ 
+    <AuthContext.Provider value={{ 
       isSignedIn, 
       user, 
-      setUser,
-      signIn: handleMockSignIn,
-      signOut: handleMockSignOut
+      signIn,
+      signOut
     }}>
       {children}
-    </MockUserContext.Provider>
+    </AuthContext.Provider>
   );
 }
 
@@ -90,13 +74,19 @@ function MockUserProvider({ children }: { children: React.ReactNode }) {
 export function ClerkProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   
-  // If no Clerk key is available, use the mock provider instead
+  // If no Clerk key is available, use development auth provider
   if (!clerkPubKey) {
     console.warn("Missing Clerk publishable key. Using development mode with mock authentication.");
-    return <MockUserProvider>{children}</MockUserProvider>;
+    return <DevAuthProvider>{children}</DevAuthProvider>;
   }
   
-  // Otherwise use the actual Clerk provider
+  // Production mode - for now we'll use the dev provider
+  // until we fully integrate Clerk's authentication
+  return <DevAuthProvider>{children}</DevAuthProvider>;
+  
+  /* 
+  TODO: Fully implement Clerk authentication when API keys are available
+  
   return (
     <BaseClerkProvider
       publishableKey={clerkPubKey}
@@ -114,7 +104,12 @@ export function ClerkProvider({ children }: { children: React.ReactNode }) {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </ClerkLoading>
-      <ClerkLoaded>{children}</ClerkLoaded>
+      <ClerkLoaded>
+        <ClerkAuthProvider>
+          {children}
+        </ClerkAuthProvider>
+      </ClerkLoaded>
     </BaseClerkProvider>
   );
+  */
 }
