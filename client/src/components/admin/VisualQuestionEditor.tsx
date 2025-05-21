@@ -170,6 +170,16 @@ export default function VisualQuestionEditor() {
   };
 
   const handleAddQuestion = () => {
+    // Validate question text is not empty
+    if (!newQuestion.text.trim()) {
+      toast({
+        title: "Error",
+        description: "Question text cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const questionToCreate = { ...newQuestion };
     
     // If type requires options but none provided, add a default
@@ -420,15 +430,17 @@ export default function VisualQuestionEditor() {
                     <div className="h-4 w-4 rounded border-2 border-gray-300"></div>
                   )}
                   <Input
+                    id="new-option-input"
                     placeholder="Add option"
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddOption()}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddOption())}
                     className="flex-grow"
                   />
                   <Button 
                     variant="outline" 
                     onClick={handleAddOption}
+                    disabled={!newOption.trim()}
                   >
                     Add
                   </Button>

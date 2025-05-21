@@ -455,8 +455,10 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
       nextIndex >= 0 &&
       nextIndex < questions.length &&
       questions[nextIndex].dependsOn &&
-      questions[nextIndex].dependsOn?.questionId !== undefined && 
-      (answers[questions[nextIndex].dependsOn?.questionId] !== questions[nextIndex].dependsOn?.value)
+      typeof questions[nextIndex].dependsOn === 'object' &&
+      'questionId' in questions[nextIndex].dependsOn &&
+      typeof questions[nextIndex].dependsOn.questionId === 'number' &&
+      (answers[questions[nextIndex].dependsOn.questionId] !== questions[nextIndex].dependsOn.value)
     ) {
       nextIndex += increment
     }
