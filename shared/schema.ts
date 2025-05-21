@@ -24,6 +24,10 @@ export const questions = pgTable("questions", {
   type: text("type").notNull(), // text, date, multiple-choice, yes/no, number
   order: integer("order").notNull(),
   options: jsonb("options"), // For multiple choice questions
+  placeholder: text("placeholder"), // Placeholder text for input fields
+  prefix: text("prefix"), // Currency symbol or other prefix
+  suffix: text("suffix"), // Units or other suffix
+  dependsOn: jsonb("depends_on"), // For conditional questions
   conditionalLogic: jsonb("conditional_logic"), // JSON for conditional branching
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
