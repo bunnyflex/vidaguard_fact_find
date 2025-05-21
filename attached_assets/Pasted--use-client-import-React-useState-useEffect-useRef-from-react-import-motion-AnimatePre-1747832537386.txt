@@ -1,0 +1,923 @@
+"use client"
+
+import React, { useState, useEffect, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Loader2, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { cva } from "class-variance-authority"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+
+// Utility function for class names
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(" ")
+}
+
+// UI Components
+const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  },
+)
+Textarea.displayName = "Textarea"
+
+const Checkbox = React.forwardRef<
+  React.ElementRef<typeof CheckboxPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <CheckboxPrimitive.Root
+    ref={ref}
+    className={cn(
+      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      className,
+    )}
+    {...props}
+  >
+    <CheckboxPrimitive.Indicator className={cn("flex items-center justify-center text-current")}>
+      <Check className="h-4 w-4" />
+    </CheckboxPrimitive.Indicator>
+  </CheckboxPrimitive.Root>
+))
+Checkbox.displayName = CheckboxPrimitive.Root.displayName
+
+const labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70")
+
+const Label = React.forwardRef<
+  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & { className?: string }
+>(({ className, ...props }, ref) => (
+  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
+))
+Label.displayName = LabelPrimitive.Root.displayName
+
+// Types
+type QuestionType = "multiple-choice" | "text" | "checkbox-multiple" | "number"
+
+type Question = {
+  id: number
+  text: string
+  type: QuestionType
+  options?: string[]
+  dependsOn?: {
+    questionId: number
+    value: string | boolean
+  }
+  placeholder?: string
+  prefix?: string
+  suffix?: string
+}
+
+type QuestionState = {
+  question: Question | null
+  isTyping: boolean
+  showOptions: boolean
+  isIntro: boolean
+  isComplete: boolean
+}
+
+// Questions data
+const questions: Question[] = [
+  {
+    id: 1,
+    text: "Are you UK domiciled and a UK tax resident?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 2,
+    text: "What is your marital status?",
+    type: "multiple-choice",
+    options: ["Single", "Married", "Divorced"],
+  },
+  {
+    id: 3,
+    text: "What is your relationship to the other applicant (if applicable)?",
+    type: "text",
+    placeholder: "e.g., Spouse, Partner, Sibling",
+  },
+  {
+    id: 4,
+    text: "Do you have any dependents? (Would you like to add any dependants to your policy?)",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 5,
+    text: "If yes, how many dependents do you have? (under 18)",
+    type: "number",
+    dependsOn: {
+      questionId: 4,
+      value: "Yes",
+    },
+    placeholder: "Enter number",
+  },
+  {
+    id: 6,
+    text: "How old are your dependents?",
+    type: "text",
+    dependsOn: {
+      questionId: 4,
+      value: "Yes",
+    },
+    placeholder: "e.g., 5, 8, 12",
+  },
+  {
+    id: 7,
+    text: "What is your occupation?",
+    type: "text",
+    placeholder: "Enter your occupation",
+  },
+  {
+    id: 8,
+    text: "What is your employment status?",
+    type: "multiple-choice",
+    options: ["Employed", "Self-Employed", "Unemployed"],
+  },
+  {
+    id: 9,
+    text: "If unemployed, please explain why.",
+    type: "text",
+    dependsOn: {
+      questionId: 8,
+      value: "Unemployed",
+    },
+    placeholder: "Provide details",
+  },
+  {
+    id: 10,
+    text: "Do you smoke?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 11,
+    text: "If no, have you smoked in the last 12 months?",
+    type: "multiple-choice",
+    dependsOn: {
+      questionId: 10,
+      value: "No",
+    },
+    options: ["Yes", "No"],
+  },
+  {
+    id: 12,
+    text: "Are you classed as vulnerable?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 13,
+    text: "If yes, please explain your vulnerability.",
+    type: "text",
+    dependsOn: {
+      questionId: 12,
+      value: "Yes",
+    },
+    placeholder: "Provide details",
+  },
+  {
+    id: 14,
+    text: "Are you currently taking any medication?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 15,
+    text: "If yes, please list the medication you are taking.",
+    type: "text",
+    dependsOn: {
+      questionId: 14,
+      value: "Yes",
+    },
+    placeholder: "List medications",
+  },
+  {
+    id: 16,
+    text: "Do you do any exercise?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 17,
+    text: "What is your height?",
+    type: "text",
+    placeholder: "e.g., 175cm or 5'10\"",
+  },
+  {
+    id: 18,
+    text: "What is your weight?",
+    type: "text",
+    placeholder: "e.g., 70kg or 154lbs",
+  },
+  {
+    id: 19,
+    text: "Are any of the following of interest to you? (Please select all that apply)",
+    type: "checkbox-multiple",
+    options: [
+      "Life Insurance",
+      "Critical Illness Cover",
+      "Income Protection",
+      "Mortgage Protection",
+      "Pensions",
+      "Investments",
+      "Other",
+    ],
+  },
+  {
+    id: 20,
+    text: "Is there anything else you would like to add?",
+    type: "text",
+    placeholder: "Additional information",
+  },
+  {
+    id: 21,
+    text: "Gross Annual Income:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Enter amount",
+  },
+  {
+    id: 22,
+    text: "Do you have any other income? (e.g., Child Support, Maintenance)",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 23,
+    text: "If yes, please specify amount and source:",
+    type: "text",
+    dependsOn: {
+      questionId: 22,
+      value: "Yes",
+    },
+    prefix: "£",
+    placeholder: "Amount and source",
+  },
+  {
+    id: 24,
+    text: "Mortgage Costs:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 25,
+    text: "Rental Costs:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 26,
+    text: "Household Bills:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 27,
+    text: "Gym/Sports Clubs:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 28,
+    text: "Insurance Costs:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 29,
+    text: "Overdraft, Loans, Credit Card Costs:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 30,
+    text: "Food/Clothes:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 31,
+    text: "Entertainment:",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 32,
+    text: "Other expenses (please specify):",
+    type: "text",
+    prefix: "£",
+    placeholder: "Amount and details",
+  },
+  {
+    id: 33,
+    text: "If you were off work due to sickness/accident, what would you receive?",
+    type: "text",
+    placeholder: "Provide details",
+  },
+  {
+    id: 34,
+    text: "Is this SSP?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 35,
+    text: "Do you have Death in Service benefit at work?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 36,
+    text: "Are you paying into a pension (Company/Personal)?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 37,
+    text: "What is your National Insurance number?",
+    type: "text",
+    placeholder: "e.g., AB123456C",
+  },
+  {
+    id: 38,
+    text: "Do you have any other Life Insurances in place?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 39,
+    text: "If yes, please provide the company name:",
+    type: "text",
+    dependsOn: {
+      questionId: 38,
+      value: "Yes",
+    },
+    placeholder: "Company name",
+  },
+  {
+    id: 40,
+    text: "Sum Assured:",
+    type: "number",
+    dependsOn: {
+      questionId: 38,
+      value: "Yes",
+    },
+    prefix: "£",
+    placeholder: "Enter amount",
+  },
+  {
+    id: 41,
+    text: "Do you have Buildings/Contents Insurance?",
+    type: "multiple-choice",
+    options: ["Yes", "No"],
+  },
+  {
+    id: 42,
+    text: "What is your current rent amount (if applicable)?",
+    type: "number",
+    prefix: "£",
+    placeholder: "Monthly amount",
+  },
+  {
+    id: 43,
+    text: "What is the remaining term on your mortgage?",
+    type: "text",
+    placeholder: "e.g., 15 years",
+  },
+  {
+    id: 44,
+    text: "What is the outstanding balance on your mortgage?",
+    type: "number",
+    prefix: "£",
+    placeholder: "Enter amount",
+  },
+  {
+    id: 45,
+    text: "How much do you have in savings or investments?",
+    type: "number",
+    prefix: "£",
+    placeholder: "Enter amount",
+  },
+]
+
+// Main component
+export function QuestionnaireChat() {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0)
+  const [state, setState] = useState<QuestionState>({
+    question: null,
+    isTyping: false,
+    showOptions: false,
+    isIntro: false,
+    isComplete: false,
+  })
+  const [answers, setAnswers] = useState<Record<number, any>>({})
+  const [textInput, setTextInput] = useState<string>("")
+  const [numberInput, setNumberInput] = useState<string>("")
+  const [checkboxValues, setCheckboxValues] = useState<Record<string, boolean>>({})
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Get the next valid question index based on dependencies
+  const getNextQuestionIndex = (currentIndex: number, direction: "next" | "prev" = "next") => {
+    const increment = direction === "next" ? 1 : -1
+    let nextIndex = currentIndex + increment
+
+    while (
+      nextIndex >= 0 &&
+      nextIndex < questions.length &&
+      questions[nextIndex].dependsOn &&
+      answers[questions[nextIndex].dependsOn.questionId] !== questions[nextIndex].dependsOn.value
+    ) {
+      nextIndex += increment
+    }
+
+    return nextIndex >= 0 && nextIndex < questions.length ? nextIndex : -1
+  }
+
+  // Initialize with intro
+  useEffect(() => {
+    setState({
+      question: null,
+      isTyping: true,
+      showOptions: false,
+      isIntro: false,
+      isComplete: false,
+    })
+
+    // Simulate typing delay for intro
+    setTimeout(() => {
+      setState({
+        question: {
+          id: 0,
+          text: "Let's start fresh with the fact find questionnaire. I'll ask you the questions one by one, and you can skip any questions you prefer not to answer. At the end, I'll create a PDF summary of your answers with the truth declaration.",
+          type: "text",
+        },
+        isTyping: false,
+        showOptions: false,
+        isIntro: true,
+        isComplete: false,
+      })
+
+      // Show first question after intro
+      setTimeout(() => {
+        setState({
+          question: questions[0],
+          isTyping: false,
+          showOptions: true,
+          isIntro: false,
+          isComplete: false,
+        })
+      }, 1000)
+    }, 1500)
+  }, [])
+
+  // Focus input when question changes
+  useEffect(() => {
+    if (state.question && (state.question.type === "text" || state.question.type === "number") && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [state.question])
+
+  // Reset input values when question changes
+  useEffect(() => {
+    setTextInput("")
+    setNumberInput("")
+    setCheckboxValues({})
+  }, [currentQuestionIndex])
+
+  const handleOptionSelect = (option: string) => {
+    // Save the answer
+    setAnswers((prev) => ({
+      ...prev,
+      [questions[currentQuestionIndex].id]: option,
+    }))
+
+    moveToNextQuestion()
+  }
+
+  const handleTextSubmit = () => {
+    if (!textInput.trim()) return
+
+    // Save the answer
+    setAnswers((prev) => ({
+      ...prev,
+      [questions[currentQuestionIndex].id]: textInput,
+    }))
+
+    moveToNextQuestion()
+  }
+
+  const handleNumberSubmit = () => {
+    if (!numberInput.trim()) return
+
+    // Save the answer
+    setAnswers((prev) => ({
+      ...prev,
+      [questions[currentQuestionIndex].id]: numberInput,
+    }))
+
+    moveToNextQuestion()
+  }
+
+  const handleCheckboxSubmit = () => {
+    const selectedOptions = Object.entries(checkboxValues)
+      .filter(([_, isChecked]) => isChecked)
+      .map(([option]) => option)
+
+    // Save the answer
+    setAnswers((prev) => ({
+      ...prev,
+      [questions[currentQuestionIndex].id]: selectedOptions,
+    }))
+
+    moveToNextQuestion()
+  }
+
+  const moveToNextQuestion = () => {
+    // Show typing indicator
+    setState((prev) => ({
+      ...prev,
+      isTyping: true,
+      showOptions: false,
+    }))
+
+    // Move to next question after delay
+    setTimeout(() => {
+      const nextIndex = getNextQuestionIndex(currentQuestionIndex)
+
+      if (nextIndex !== -1) {
+        // Show next question
+        setCurrentQuestionIndex(nextIndex)
+        setState({
+          question: questions[nextIndex],
+          isTyping: false,
+          showOptions: true,
+          isIntro: false,
+          isComplete: false,
+        })
+      } else {
+        // Show completion message
+        setState({
+          question: {
+            id: 999,
+            text: "Thank you for completing all the questions. I'll now prepare a PDF summary of your answers with the truth declaration. Is there anything else you'd like to add before I generate the summary?",
+            type: "text",
+          },
+          isTyping: false,
+          showOptions: false,
+          isIntro: false,
+          isComplete: true,
+        })
+      }
+    }, 1000)
+  }
+
+  const moveToPrevQuestion = () => {
+    const prevIndex = getNextQuestionIndex(currentQuestionIndex, "prev")
+
+    if (prevIndex !== -1) {
+      setCurrentQuestionIndex(prevIndex)
+      setState({
+        question: questions[prevIndex],
+        isTyping: false,
+        showOptions: true,
+        isIntro: false,
+        isComplete: false,
+      })
+    }
+  }
+
+  const handleRestart = () => {
+    // Reset state
+    setCurrentQuestionIndex(0)
+    setAnswers({})
+    setTextInput("")
+    setNumberInput("")
+    setCheckboxValues({})
+
+    setState({
+      question: null,
+      isTyping: true,
+      showOptions: false,
+      isIntro: false,
+      isComplete: false,
+    })
+
+    // Simulate typing delay for intro
+    setTimeout(() => {
+      setState({
+        question: {
+          id: 0,
+          text: "Let's start fresh with the fact find questionnaire. I'll ask you the questions one by one, and you can skip any questions you prefer not to answer. At the end, I'll create a PDF summary of your answers with the truth declaration.",
+          type: "text",
+        },
+        isTyping: false,
+        showOptions: false,
+        isIntro: true,
+        isComplete: false,
+      })
+
+      // Show first question after intro
+      setTimeout(() => {
+        setState({
+          question: questions[0],
+          isTyping: false,
+          showOptions: true,
+          isIntro: false,
+          isComplete: false,
+        })
+      }, 1000)
+    }, 1500)
+  }
+
+  const renderQuestionInput = () => {
+    if (!state.question) return null
+
+    switch (state.question.type) {
+      case "multiple-choice":
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-wrap gap-2 mt-4"
+          >
+            {state.question.options?.map((option, index) => (
+              <Button key={index} variant="outline" className="bg-white" onClick={() => handleOptionSelect(option)}>
+                {option}
+              </Button>
+            ))}
+          </motion.div>
+        )
+
+      case "text":
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 space-y-2"
+          >
+            <div className="flex items-center gap-2">
+              {state.question.prefix && <span className="text-gray-500">{state.question.prefix}</span>}
+              {state.question.text.includes("please explain") || state.question.text.includes("anything else") ? (
+                <Textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder={state.question.placeholder}
+                  className="flex-1"
+                />
+              ) : (
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder={state.question.placeholder}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleTextSubmit()
+                    }
+                  }}
+                />
+              )}
+              {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
+            </div>
+            <Button onClick={handleTextSubmit} disabled={!textInput.trim()}>
+              Continue
+            </Button>
+          </motion.div>
+        )
+
+      case "number":
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 space-y-2"
+          >
+            <div className="flex items-center gap-2">
+              {state.question.prefix && <span className="text-gray-500">{state.question.prefix}</span>}
+              <Input
+                ref={inputRef}
+                type="number"
+                value={numberInput}
+                onChange={(e) => setNumberInput(e.target.value)}
+                placeholder={state.question.placeholder}
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleNumberSubmit()
+                  }
+                }}
+              />
+              {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
+            </div>
+            <Button onClick={handleNumberSubmit} disabled={!numberInput.trim()}>
+              Continue
+            </Button>
+          </motion.div>
+        )
+
+      case "checkbox-multiple":
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 space-y-4"
+          >
+            <div className="space-y-2">
+              {state.question.options?.map((option, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`checkbox-${option}`}
+                    checked={checkboxValues[option] || false}
+                    onCheckedChange={(checked) => {
+                      setCheckboxValues((prev) => ({
+                        ...prev,
+                        [option]: checked === true,
+                      }))
+                    }}
+                  />
+                  <Label htmlFor={`checkbox-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </div>
+            <Button onClick={handleCheckboxSubmit} disabled={!Object.values(checkboxValues).some((v) => v)}>
+              Continue
+            </Button>
+          </motion.div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <div className="space-y-6 pb-20">
+        {/* User message - always visible */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex justify-start"
+        >
+          <div className="flex max-w-[80%] items-start space-x-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-white">
+              <span className="text-sm font-medium">S</span>
+            </div>
+            <div className="rounded-2xl rounded-tl-none bg-gray-100 px-4 py-2">
+              <p className="text-gray-800">Lets start new again</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Current question or typing indicator */}
+        <AnimatePresence mode="wait">
+          {state.isTyping ? (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex items-center space-x-2 text-gray-500"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Typing...</span>
+            </motion.div>
+          ) : state.question ? (
+            <motion.div
+              key={`question-${state.question.id}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex max-w-full flex-col space-y-4"
+            >
+              <div className="prose prose-gray max-w-none">
+                {state.isIntro ? (
+                  <p>{state.question.text}</p>
+                ) : state.isComplete ? (
+                  <p>{state.question.text}</p>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-500 font-medium">{currentQuestionIndex + 1}.</span>
+                      <p className="font-medium">{state.question.text}</p>
+                    </div>
+
+                    {renderQuestionInput()}
+                  </div>
+                )}
+              </div>
+
+              {(state.isIntro || state.isComplete) && (
+                <div className="mt-4 flex items-center space-x-2">
+                  <motion.div
+                    initial={{ rotate: 0 }}
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      duration: 2,
+                      ease: "linear",
+                      repeat: Number.POSITIVE_INFINITY,
+                      repeatType: "loop",
+                    }}
+                    className="text-orange-400"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 2L14.5 9H22L16 13.5L18.5 20.5L12 16L5.5 20.5L8 13.5L2 9H9.5L12 2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </motion.div>
+
+                  <div className="ml-auto flex items-center space-x-2">
+                    <Button variant="ghost" size="icon">
+                      <Copy className="h-4 w-4" />
+                      <span className="sr-only">Copy</span>
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <ThumbsUp className="h-4 w-4" />
+                      <span className="sr-only">Like</span>
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <ThumbsDown className="h-4 w-4" />
+                      <span className="sr-only">Dislike</span>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-1">
+                          <RotateCcw className="h-4 w-4" />
+                          <span>Retry</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleRestart}>Restart conversation</DropdownMenuItem>
+                        <DropdownMenuItem>Regenerate response</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )}
+
+              {!state.isIntro && !state.isComplete && (
+                <div className="flex justify-between mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={moveToPrevQuestion}
+                    disabled={currentQuestionIndex === 0}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Previous</span>
+                  </Button>
+
+                  <div className="text-sm text-gray-500">
+                    Question {currentQuestionIndex + 1} of {questions.length}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Skip current question
+                      moveToNextQuestion()
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <span>Skip</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}

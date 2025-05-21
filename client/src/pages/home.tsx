@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
-import FactFindChat from "@/components/client/FactFindChat";
+import { QuestionnaireChat } from "@/components/client/QuestionnaireChat";
 import SignatureView from "@/components/client/SignatureView";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkProvider";
@@ -46,7 +46,15 @@ export default function Home() {
         ) : (
           <>
             {!showSignature ? (
-              <FactFindChat onComplete={handleCompleteFactFind} />
+              <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden h-[calc(100vh-240px)]">
+                <div className="border-b p-4">
+                  <h2 className="text-xl font-semibold">Insurance Fact Find</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Please answer the following questions to help us understand your insurance needs.
+                  </p>
+                </div>
+                <QuestionnaireChat onComplete={handleCompleteFactFind} />
+              </div>
             ) : (
               <SignatureView 
                 answers={answers} 
