@@ -20,40 +20,61 @@ export function useFactFind() {
   // Create a new session
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/sessions", {
+      console.log("Creating new session for user:", user?.id);
+      const response = await apiRequest("POST", "/api/sessions", {
         userId: user?.id,
         email: user?.emailAddresses?.[0]?.emailAddress,
         status: "in-progress",
       });
+      console.log("Session created:", response);
+      return response;
     },
     onSuccess: (data) => {
+      console.log("Setting session ID:", data.id);
       setSessionId(data.id);
     },
   });
 
   // Save answer to a question
   const saveAnswerMutation = useMutation({
-    mutationFn: async ({ questionId, value }: { questionId: number; value: string }) => {
-      if (!sessionId) throw new Error("No active session");
-      
-      return apiRequest(
-        "POST", 
-        `/api/sessions/${sessionId}/answers`, 
+    mutationFn: async ({
+      questionId,
+      value,
+    }: {
+      questionId: number;
+      value: string;
+    }) => {
+      if (!sessionId) {
+        console.error("No active session when trying to save answer");
+        throw new Error("No active session");
+      }
+
+      console.log("Saving answer:", { sessionId, questionId, value });
+      const response = await apiRequest(
+        "POST",
+        `/api/sessions/${sessionId}/answers`,
         {
           questionId,
           value,
         }
       );
+      console.log("Answer saved:", response);
+      return response;
     },
     onSuccess: (data) => {
+      console.log("Updating answers state with new answer:", data);
       setAnswers((prev) => {
         // Replace answer if it already exists, otherwise add it
-        const existingIndex = prev.findIndex(a => a.questionId === data.questionId);
+        const existingIndex = prev.findIndex(
+          (a) => a.questionId === data.questionId
+        );
         if (existingIndex >= 0) {
           const newAnswers = [...prev];
           newAnswers[existingIndex] = data;
+          console.log("Updated existing answer:", newAnswers);
           return newAnswers;
         } else {
+          console.log("Added new answer:", [...prev, data]);
           return [...prev, data];
         }
       });
@@ -64,23 +85,25 @@ export function useFactFind() {
   useEffect(() => {
     const fetchExistingSession = async () => {
       if (!user) return;
-      
+
       try {
         setIsLoading(true);
         const response = await fetch("/api/sessions");
-        
+
         if (response.ok) {
           const sessions = await response.json();
-          
+
           // Find most recent incomplete session if it exists
           const incompleteSession = sessions.find((s: any) => !s.completedAt);
-          
+
           if (incompleteSession) {
             setSessionId(incompleteSession.id);
-            
+
             // Fetch answers for this session
-            const answersResponse = await fetch(`/api/sessions/${incompleteSession.id}`);
-            
+            const answersResponse = await fetch(
+              `/api/sessions/${incompleteSession.id}`
+            );
+
             if (answersResponse.ok) {
               const data = await answersResponse.json();
               setAnswers(data.answers || []);
@@ -93,7 +116,7 @@ export function useFactFind() {
         setIsLoading(false);
       }
     };
-    
+
     fetchExistingSession();
   }, [user]);
 
@@ -112,15 +135,15 @@ export function useFactFind() {
   // Get all answers for the current session
   const getSessionAnswers = async (): Promise<Answer[]> => {
     if (!sessionId) return [];
-    
+
     try {
       const response = await fetch(`/api/sessions/${sessionId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.answers || [];
       }
-      
+
       return [];
     } catch (error) {
       console.error("Error fetching session answers:", error);

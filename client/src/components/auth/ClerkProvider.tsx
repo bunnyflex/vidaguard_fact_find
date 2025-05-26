@@ -1,14 +1,28 @@
 // This is a mock replacement for Clerk authentication
 // We're providing a simplified version since we've disabled auth requirements
 
-import React, { createContext, useContext } from 'react';
+import React from "react";
+import {
+  ClerkProvider as BaseClerkProvider,
+  SignIn,
+  SignUp,
+  useUser as useClerkUser,
+  UserButton,
+  SignInButton,
+  SignUpButton,
+  useClerk,
+  useSignIn,
+  useSignUp,
+} from "@clerk/clerk-react";
+import type { ReactNode } from "react";
 
-// Create a mock user context
+// Create a mock user context for development
 interface User {
   id: string;
   firstName?: string;
   lastName?: string;
   email?: string;
+  imageUrl?: string;
 }
 
 interface UserContextType {
@@ -19,33 +33,54 @@ interface UserContextType {
 }
 
 const defaultUser: User = {
-  id: 'dev-user-123',
-  firstName: 'Test',
-  lastName: 'User',
-  email: 'test@example.com',
+  id: "dev-user-123",
+  firstName: "Test",
+  lastName: "User",
+  email: "test@example.com",
 };
 
-const UserContext = createContext<UserContextType>({
+const UserContext = React.createContext<UserContextType>({
   isSignedIn: true,
   user: defaultUser,
   signIn: () => {},
   signOut: () => {},
 });
 
-export const useUser = () => useContext(UserContext);
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-export function ClerkProvider({ children }: { children: React.ReactNode }) {
-  // In development mode, always return a signed-in user
-  const value = {
-    isSignedIn: true,
-    user: defaultUser,
-    signIn: () => {},
-    signOut: () => {},
-  };
+// Re-export Clerk components and hooks for consistent imports across the app
+export {
+  SignIn,
+  SignUp,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useUser,
+  useClerk,
+  useSignIn,
+  useSignUp,
+} from "@clerk/clerk-react";
+
+export function ClerkProvider({ children }: { children: ReactNode }) {
+  if (!publishableKey) {
+    console.warn("No Clerk publishable key found. Using mock authentication.");
+    return (
+      <UserContext.Provider
+        value={{
+          isSignedIn: true,
+          user: defaultUser,
+          signIn: () => {},
+          signOut: () => {},
+        }}
+      >
+        {children}
+      </UserContext.Provider>
+    );
+  }
 
   return (
-    <UserContext.Provider value={value}>
+    <BaseClerkProvider publishableKey={publishableKey}>
       {children}
-    </UserContext.Provider>
+    </BaseClerkProvider>
   );
 }

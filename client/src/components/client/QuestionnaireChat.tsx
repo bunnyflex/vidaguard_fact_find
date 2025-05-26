@@ -1,39 +1,54 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Loader2, ChevronRight, ChevronLeft, Check } from 'lucide-react'
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import * as LabelPrimitive from "@radix-ui/react-label"
-import { cva } from "class-variance-authority"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useUser } from "@/components/auth/ClerkProvider"
-import { useToast } from "@/hooks/use-toast"
-import { useFactFind } from "@/hooks/useFactFind"
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RotateCcw,
+  Loader2,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+} from "lucide-react";
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import * as LabelPrimitive from "@radix-ui/react-label";
+import { cva } from "class-variance-authority";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useUser } from "@/components/auth/ClerkProvider";
+import { useToast } from "@/hooks/use-toast";
+import { useFactFind } from "@/hooks/useFactFind";
 
 // Utility function for class names
 function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ")
+  return classes.filter(Boolean).join(" ");
 }
 
 // UI Components
-const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  ({ className, ...props }, ref) => {
-    return (
-      <textarea
-        className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className,
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  },
-)
-Textarea.displayName = "Textarea"
+const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <textarea
+      className={cn(
+        "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+Textarea.displayName = "Textarea";
 
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -43,51 +58,61 @@ const Checkbox = React.forwardRef<
     ref={ref}
     className={cn(
       "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
-      className,
+      className
     )}
     {...props}
   >
-    <CheckboxPrimitive.Indicator className={cn("flex items-center justify-center text-current")}>
+    <CheckboxPrimitive.Indicator
+      className={cn("flex items-center justify-center text-current")}
+    >
       <Check className="h-4 w-4" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
-))
-Checkbox.displayName = CheckboxPrimitive.Root.displayName
+));
+Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
-const labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70")
+const labelVariants = cva(
+  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+);
 
 const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & { className?: string }
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & {
+    className?: string;
+  }
 >(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
-))
-Label.displayName = LabelPrimitive.Root.displayName
+  <LabelPrimitive.Root
+    ref={ref}
+    className={cn(labelVariants(), className)}
+    {...props}
+  />
+));
+Label.displayName = LabelPrimitive.Root.displayName;
 
 // Types
-type QuestionType = "multiple-choice" | "text" | "checkbox-multiple" | "number"
+type QuestionType = "multiple-choice" | "text" | "checkbox-multiple" | "number";
 
 type Question = {
-  id: number
-  text: string
-  type: QuestionType
-  options?: string[]
+  id: number;
+  text: string;
+  type: QuestionType;
+  options?: string[];
   dependsOn?: {
-    questionId: number
-    value: string | boolean
-  }
-  placeholder?: string
-  prefix?: string
-  suffix?: string
-}
+    questionId: number;
+    value: string | boolean;
+  };
+  placeholder?: string;
+  prefix?: string;
+  suffix?: string;
+};
 
 type QuestionState = {
-  question: Question | null
-  isTyping: boolean
-  showOptions: boolean
-  isIntro: boolean
-  isComplete: boolean
-}
+  question: Question | null;
+  isTyping: boolean;
+  showOptions: boolean;
+  isIntro: boolean;
+  isComplete: boolean;
+};
 
 // Questions data
 const questions: Question[] = [
@@ -420,51 +445,60 @@ const questions: Question[] = [
     prefix: "£",
     placeholder: "Enter amount",
   },
-]
+];
 
 interface QuestionnaireChatProps {
-  onComplete: (sessionId: number, answers: Array<{ question: string; answer: string }>) => void;
+  onComplete: (
+    sessionId: number,
+    answers: Array<{ question: string; answer: string }>
+  ) => void;
 }
 
 // Main component
 export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
-  const { toast } = useToast()
-  const { user } = useUser()
-  const { sessionId, createSession, saveAnswer } = useFactFind()
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0)
+  const { toast } = useToast();
+  const { user } = useUser();
+  const { sessionId, createSession, saveAnswer } = useFactFind();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [state, setState] = useState<QuestionState>({
     question: null,
     isTyping: false,
     showOptions: false,
     isIntro: false,
     isComplete: false,
-  })
-  const [answers, setAnswers] = useState<Record<number, any>>({})
-  const [textInput, setTextInput] = useState<string>("")
-  const [numberInput, setNumberInput] = useState<string>("")
-  const [checkboxValues, setCheckboxValues] = useState<Record<string, boolean>>({})
-  const [loading, setLoading] = useState<boolean>(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  });
+  const [answers, setAnswers] = useState<Record<number, any>>({});
+  const [textInput, setTextInput] = useState<string>("");
+  const [numberInput, setNumberInput] = useState<string>("");
+  const [checkboxValues, setCheckboxValues] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [loading, setLoading] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get the next valid question index based on dependencies
-  const getNextQuestionIndex = (currentIndex: number, direction: "next" | "prev" = "next") => {
-    const increment = direction === "next" ? 1 : -1
-    let nextIndex = currentIndex + increment
+  const getNextQuestionIndex = (
+    currentIndex: number,
+    direction: "next" | "prev" = "next"
+  ) => {
+    const increment = direction === "next" ? 1 : -1;
+    let nextIndex = currentIndex + increment;
 
     while (
       nextIndex >= 0 &&
       nextIndex < questions.length &&
       questions[nextIndex].dependsOn &&
-      typeof questions[nextIndex].dependsOn === 'object' &&
-      'questionId' in questions[nextIndex].dependsOn &&
-      typeof questions[nextIndex].dependsOn.questionId === 'number' &&
-      (answers[questions[nextIndex].dependsOn.questionId] !== questions[nextIndex].dependsOn.value)
+      typeof questions[nextIndex].dependsOn === "object" &&
+      "questionId" in questions[nextIndex].dependsOn &&
+      typeof questions[nextIndex].dependsOn.questionId === "number" &&
+      answers[questions[nextIndex].dependsOn.questionId] !==
+        questions[nextIndex].dependsOn.value
     ) {
-      nextIndex += increment
+      nextIndex += increment;
     }
 
-    return nextIndex >= 0 && nextIndex < questions.length ? nextIndex : -1
-  }
+    return nextIndex >= 0 && nextIndex < questions.length ? nextIndex : -1;
+  };
 
   // Initialize with intro
   useEffect(() => {
@@ -474,7 +508,7 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
       showOptions: false,
       isIntro: false,
       isComplete: false,
-    })
+    });
 
     // Create a session if needed
     const initSession = async () => {
@@ -485,12 +519,12 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
           console.error("Failed to create session:", error);
           toast({
             title: "Error",
-            description: "Failed to create session."
+            description: "Failed to create session.",
           });
         }
       }
     };
-    
+
     initSession();
 
     // Simulate typing delay for intro
@@ -505,7 +539,7 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         showOptions: false,
         isIntro: true,
         isComplete: false,
-      })
+      });
 
       // Show first question after intro
       setTimeout(() => {
@@ -515,26 +549,30 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
           showOptions: true,
           isIntro: false,
           isComplete: false,
-        })
-      }, 1000)
-    }, 1500)
-  }, [])
+        });
+      }, 1000);
+    }, 1500);
+  }, []);
 
   // Focus input when question changes
   useEffect(() => {
-    if (state.question && (state.question.type === "text" || state.question.type === "number") && inputRef.current) {
-      inputRef.current.focus()
+    if (
+      state.question &&
+      (state.question.type === "text" || state.question.type === "number") &&
+      inputRef.current
+    ) {
+      inputRef.current.focus();
     }
-  }, [state.question])
+  }, [state.question]);
 
   // Reset input values when question changes
   useEffect(() => {
     if (state.question) {
-      setTextInput("")
-      setNumberInput("")
-      setCheckboxValues({})
+      setTextInput("");
+      setNumberInput("");
+      setCheckboxValues({});
     }
-  }, [state.question])
+  }, [state.question]);
 
   // Handle moving to the next question
   const handleNextQuestion = async () => {
@@ -545,29 +583,31 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         showOptions: true,
         isIntro: false,
         isComplete: false,
-      })
-      setCurrentQuestionIndex(0)
-      return
+      });
+      setCurrentQuestionIndex(0);
+      return;
     }
 
-    if (!state.question) return
+    if (!state.question) return;
 
     // Save the current answer
-    const questionId = state.question.id
-    let answerValue: any
+    const questionId = state.question.id;
+    let answerValue: any;
 
     if (state.question.type === "text") {
-      answerValue = textInput.trim()
+      answerValue = textInput.trim();
       if (!answerValue) {
-        answerValue = "Not provided"
+        answerValue = "Not provided";
       }
     } else if (state.question.type === "number") {
-      answerValue = numberInput ? numberInput : "Not provided"
+      answerValue = numberInput ? numberInput : "Not provided";
     } else if (state.question.type === "checkbox-multiple") {
       const selectedOptions = Object.entries(checkboxValues)
         .filter(([_, checked]) => checked)
-        .map(([option]) => option)
-      answerValue = selectedOptions.length ? selectedOptions.join(", ") : "None selected"
+        .map(([option]) => option);
+      answerValue = selectedOptions.length
+        ? selectedOptions.join(", ")
+        : "None selected";
     } else {
       // Multiple choice
       if (!answers[questionId]) {
@@ -575,43 +615,43 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
           title: "Please select an option",
           description: "Please select at least one option to continue.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
-      answerValue = answers[questionId]
+      answerValue = answers[questionId];
     }
 
     try {
-      setLoading(true)
+      setLoading(true);
       // Save to our fact-find system
       if (sessionId) {
-        await saveAnswer(questionId, answerValue.toString())
+        await saveAnswer(questionId, answerValue.toString());
       }
     } catch (error) {
-      console.error("Error saving answer:", error)
+      console.error("Error saving answer:", error);
       toast({
         title: "Error",
         description: "Failed to save your answer.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
 
     // Store answer locally
-    setAnswers((prev) => ({ ...prev, [questionId]: answerValue }))
+    setAnswers((prev) => ({ ...prev, [questionId]: answerValue }));
 
     // Move to the next question
-    const nextIndex = getNextQuestionIndex(currentQuestionIndex)
+    const nextIndex = getNextQuestionIndex(currentQuestionIndex);
     if (nextIndex !== -1) {
-      setCurrentQuestionIndex(nextIndex)
+      setCurrentQuestionIndex(nextIndex);
       setState({
         question: questions[nextIndex],
         isTyping: false,
         showOptions: true,
         isIntro: false,
         isComplete: false,
-      })
+      });
     } else {
       // All questions completed
       setState({
@@ -624,14 +664,14 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         showOptions: false,
         isIntro: false,
         isComplete: true,
-      })
+      });
 
       // Format answers for the callback
       const formattedAnswers = Object.entries(answers).map(([id, value]) => {
-        const question = questions.find(q => q.id === parseInt(id));
+        const question = questions.find((q) => q.id === parseInt(id));
         return {
           question: question ? question.text : `Question ${id}`,
-          answer: value.toString()
+          answer: value.toString(),
         };
       });
 
@@ -640,95 +680,130 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         onComplete(sessionId, formattedAnswers);
       }
     }
-  }
+  };
 
   // Handle moving to the previous question
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      const prevIndex = getNextQuestionIndex(currentQuestionIndex, "prev")
+      const prevIndex = getNextQuestionIndex(currentQuestionIndex, "prev");
       if (prevIndex !== -1) {
-        setCurrentQuestionIndex(prevIndex)
+        setCurrentQuestionIndex(prevIndex);
         setState({
           question: questions[prevIndex],
           isTyping: false,
           showOptions: true,
           isIntro: false,
           isComplete: false,
-        })
+        });
       }
     }
-  }
+  };
 
   // Handle multiple choice selection
   const handleOptionSelect = async (value: string) => {
-    if (!state.question) return
-    setAnswers((prev) => ({ ...prev, [state.question!.id]: value }))
-    
-    // Automatically proceed to the next question after a short delay
-    setTimeout(() => {
-      handleNextQuestion()
-    }, 500)
-  }
+    if (!state.question?.id) return;
+
+    try {
+      setLoading(true);
+      console.log("Selecting option:", {
+        questionId: state.question.id,
+        value,
+      });
+
+      // Update answers state immediately
+      setAnswers((prev) => {
+        console.log("Previous answers:", prev);
+        const newAnswers = {
+          ...prev,
+          [state.question!.id]: value,
+        };
+        console.log("New answers:", newAnswers);
+        return newAnswers;
+      });
+
+      // Save to fact-find system
+      if (sessionId) {
+        console.log("Saving answer to session:", sessionId);
+        await saveAnswer(state.question!.id, value);
+        console.log("Answer saved successfully");
+      } else {
+        console.warn("No active session found");
+      }
+
+      // Move to next question
+      console.log("Moving to next question");
+      handleNextQuestion();
+    } catch (error) {
+      console.error("Error saving answer:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save your answer.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle checkbox selection
   const handleCheckboxChange = (option: string, checked: boolean) => {
-    setCheckboxValues((prev) => ({ ...prev, [option]: checked }))
-  }
+    setCheckboxValues((prev) => ({ ...prev, [option]: checked }));
+  };
 
   // Variant styles for UI elements
   const messageVariants = {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -10 },
-  }
+  };
 
   const optionsVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  }
+  };
 
   const optionVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
-  }
+  };
 
   // Calculate progress percentage
   const calculateProgress = () => {
-    if (questions.length === 0) return 0
-    const percentage = (currentQuestionIndex / questions.length) * 100
-    return Math.min(100, Math.max(0, percentage))
-  }
+    if (questions.length === 0) return 0;
+    const percentage = (currentQuestionIndex / questions.length) * 100;
+    return Math.min(100, Math.max(0, percentage));
+  };
 
   // Validate input based on question type
   const isInputValid = () => {
-    if (!state.question) return false
-    
+    if (!state.question) return false;
+
     switch (state.question.type) {
       case "text":
-        return textInput.trim().length > 0
+        return textInput.trim().length > 0;
       case "number":
-        return numberInput.trim().length > 0 && !isNaN(Number(numberInput))
+        return numberInput.trim().length > 0 && !isNaN(Number(numberInput));
       case "multiple-choice":
-        return !!answers[state.question.id]
+        return !!answers[state.question.id];
       case "checkbox-multiple":
-        return Object.values(checkboxValues).some(v => v === true)
+        return Object.values(checkboxValues).some((v) => v === true);
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-full">
       {/* Progress bar */}
       <div className="h-1 bg-gray-100 dark:bg-gray-800 w-full">
-        <motion.div 
+        <motion.div
           className="h-full bg-gradient-to-r from-blue-400 to-primary"
           initial={{ width: "0%" }}
           animate={{ width: `${calculateProgress()}%` }}
           transition={{ duration: 0.5 }}
         />
       </div>
-    
+
       {/* Chat container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <AnimatePresence mode="popLayout">
@@ -750,7 +825,9 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
                 </div>
               ) : (
                 <div className="prose prose-blue dark:prose-invert max-w-none">
-                  <p className="text-gray-800 dark:text-gray-200">{state.question?.text}</p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    {state.question?.text}
+                  </p>
                 </div>
               )}
             </motion.div>
@@ -771,156 +848,211 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
           )}
 
           {/* Input options based on question type */}
-          {state.showOptions && state.question && !state.isIntro && !answers[state.question.id] && (
-            <motion.div
-              className="space-y-4 max-w-4xl"
-              variants={optionsVariants}
-              initial="hidden"
-              animate="visible"
-              key={`options-${state.question.id}`}
-              layout
-            >
-              {state.question.type === "multiple-choice" && state.question.options && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {state.question.options.map((option) => (
-                    <motion.div key={option} variants={optionVariants}>
-                      <Button
-                        variant={answers[state.question!.id] === option ? "default" : "outline"}
-                        className="w-full justify-start text-left"
-                        onClick={() => handleOptionSelect(option)}
-                      >
-                        {option}
-                      </Button>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {state.question.type === "text" && (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Textarea
-                      placeholder={state.question.placeholder}
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && textInput.trim().length > 0) {
-                          e.preventDefault();
-                          handleNextQuestion();
-                        }
-                      }}
-                      className={`w-full border-2 ${
-                        textInput.trim() === '' ? 'border-red-200 focus:border-red-300' : 'border-green-200 focus:border-green-300'
-                      } transition-colors duration-200`}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: textInput.trim() ? 1 : 0, y: textInput.trim() ? 0 : 10 }}
-                      className="absolute right-3 top-3 text-green-500"
-                    >
-                      {textInput.trim() && <Check className="h-4 w-4" />}
-                    </motion.div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-500">
-                      {textInput.trim() === '' && 
-                        <span className="text-red-500">This field is required</span>
-                      }
+          {state.showOptions &&
+            state.question &&
+            !state.isIntro &&
+            !answers[state.question.id] && (
+              <motion.div
+                className="space-y-4 max-w-4xl"
+                variants={optionsVariants}
+                initial="hidden"
+                animate="visible"
+                key={`options-${state.question.id}`}
+                layout
+              >
+                {state.question.type === "multiple-choice" &&
+                  state.question.options && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {state.question.options.map((option) => (
+                        <motion.div key={option} variants={optionVariants}>
+                          <Button
+                            variant={
+                              answers[state.question!.id] === option
+                                ? "default"
+                                : "outline"
+                            }
+                            className="w-full justify-start text-left"
+                            onClick={() => handleOptionSelect(option)}
+                          >
+                            {option}
+                          </Button>
+                        </motion.div>
+                      ))}
                     </div>
-                    <div className="text-xs text-gray-500">Press Enter to continue</div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {state.question.type === "number" && (
-                <div className="space-y-2">
-                  <div className="relative flex items-center space-x-2">
-                    {state.question.prefix && (
-                      <span className="text-gray-500 absolute left-3 z-10">{state.question.prefix}</span>
-                    )}
-                    <Input
-                      ref={inputRef}
-                      type="number"
-                      placeholder={state.question.placeholder}
-                      value={numberInput}
-                      onChange={(e) => setNumberInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && numberInput.trim().length > 0) {
-                          e.preventDefault();
-                          handleNextQuestion();
-                        }
-                      }}
-                      className={`w-full ${state.question.prefix ? 'pl-6' : ''} border-2 ${
-                        numberInput.trim() === '' ? 'border-red-200 focus:border-red-300' : 'border-green-200 focus:border-green-300'
-                      } transition-colors duration-200`}
-                    />
-                    {state.question.suffix && <span className="text-gray-500">{state.question.suffix}</span>}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ 
-                        opacity: numberInput.trim() ? 1 : 0, 
-                        scale: numberInput.trim() ? 1 : 0.8 
-                      }}
-                      className="absolute right-3 text-green-500"
-                    >
-                      {numberInput.trim() && <Check className="h-4 w-4" />}
-                    </motion.div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-500">
-                      {numberInput.trim() === '' && 
-                        <span className="text-red-500">This field is required</span>
-                      }
-                    </div>
-                    <div className="text-xs text-gray-500">Press Enter to continue</div>
-                  </div>
-                </div>
-              )}
-
-              {state.question.type === "checkbox-multiple" && state.question.options && (
-                <div className="space-y-4">
-                  <div className="space-y-3 p-1">
-                    {state.question.options.map((option) => (
-                      <motion.div 
-                        key={option} 
-                        variants={optionVariants} 
-                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
+                {state.question.type === "text" && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Textarea
+                        placeholder={state.question.placeholder}
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            !e.shiftKey &&
+                            textInput.trim().length > 0
+                          ) {
+                            e.preventDefault();
+                            handleNextQuestion();
+                          }
+                        }}
+                        className={`w-full border-2 ${
+                          textInput.trim() === ""
+                            ? "border-red-200 focus:border-red-300"
+                            : "border-green-200 focus:border-green-300"
+                        } transition-colors duration-200`}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{
+                          opacity: textInput.trim() ? 1 : 0,
+                          y: textInput.trim() ? 0 : 10,
+                        }}
+                        className="absolute right-3 top-3 text-green-500"
                       >
-                        <Checkbox
-                          id={`checkbox-${option}`}
-                          checked={checkboxValues[option] || false}
-                          onCheckedChange={(checked) => handleCheckboxChange(option, checked === true)}
-                          className="border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
-                        <Label 
-                          htmlFor={`checkbox-${option}`}
-                          className="cursor-pointer select-none flex-1"
-                        >
-                          {option}
-                        </Label>
+                        {textInput.trim() && <Check className="h-4 w-4" />}
                       </motion.div>
-                    ))}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {textInput.trim() === "" && (
+                          <span className="text-red-500">
+                            This field is required
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Press Enter to continue
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    {!Object.values(checkboxValues).some(v => v === true) && 
-                      <span className="text-xs text-red-500">Please select at least one option</span>
-                    }
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleNextQuestion}
-                      disabled={!Object.values(checkboxValues).some(v => v === true)}
-                      className={Object.values(checkboxValues).some(v => v === true) ? "ml-auto block border-green-200 hover:border-green-300" : "ml-auto block"}
-                    >
-                      Continue
-                    </Button>
+                )}
+
+                {state.question.type === "number" && (
+                  <div className="space-y-2">
+                    <div className="relative flex items-center space-x-2">
+                      {state.question.prefix && (
+                        <span className="text-gray-500 absolute left-3 z-10">
+                          {state.question.prefix}
+                        </span>
+                      )}
+                      <Input
+                        ref={inputRef}
+                        type="number"
+                        placeholder={state.question.placeholder}
+                        value={numberInput}
+                        onChange={(e) => setNumberInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            numberInput.trim().length > 0
+                          ) {
+                            e.preventDefault();
+                            handleNextQuestion();
+                          }
+                        }}
+                        className={`w-full ${
+                          state.question.prefix ? "pl-6" : ""
+                        } border-2 ${
+                          numberInput.trim() === ""
+                            ? "border-red-200 focus:border-red-300"
+                            : "border-green-200 focus:border-green-300"
+                        } transition-colors duration-200`}
+                      />
+                      {state.question.suffix && (
+                        <span className="text-gray-500">
+                          {state.question.suffix}
+                        </span>
+                      )}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{
+                          opacity: numberInput.trim() ? 1 : 0,
+                          scale: numberInput.trim() ? 1 : 0.8,
+                        }}
+                        className="absolute right-3 text-green-500"
+                      >
+                        {numberInput.trim() && <Check className="h-4 w-4" />}
+                      </motion.div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {numberInput.trim() === "" && (
+                          <span className="text-red-500">
+                            This field is required
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Press Enter to continue
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-            </motion.div>
-          )}
+                )}
+
+                {state.question.type === "checkbox-multiple" &&
+                  state.question.options && (
+                    <div className="space-y-4">
+                      <div className="space-y-3 p-1">
+                        {state.question.options.map((option) => (
+                          <motion.div
+                            key={option}
+                            variants={optionVariants}
+                            className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <Checkbox
+                              id={`checkbox-${option}`}
+                              checked={checkboxValues[option] || false}
+                              onCheckedChange={(checked) =>
+                                handleCheckboxChange(option, checked === true)
+                              }
+                              className="border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                            />
+                            <Label
+                              htmlFor={`checkbox-${option}`}
+                              className="cursor-pointer select-none flex-1"
+                            >
+                              {option}
+                            </Label>
+                          </motion.div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        {!Object.values(checkboxValues).some(
+                          (v) => v === true
+                        ) && (
+                          <span className="text-xs text-red-500">
+                            Please select at least one option
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNextQuestion}
+                          disabled={
+                            !Object.values(checkboxValues).some(
+                              (v) => v === true
+                            )
+                          }
+                          className={
+                            Object.values(checkboxValues).some(
+                              (v) => v === true
+                            )
+                              ? "ml-auto block border-green-200 hover:border-green-300"
+                              : "ml-auto block"
+                          }
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+              </motion.div>
+            )}
 
           {/* Completion message */}
           {state.isComplete && (
@@ -933,9 +1065,12 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
               key="completion"
             >
               <div className="prose prose-green dark:prose-invert max-w-none">
-                <h3 className="text-green-800 dark:text-green-300">Questionnaire Complete!</h3>
+                <h3 className="text-green-800 dark:text-green-300">
+                  Questionnaire Complete!
+                </h3>
                 <p className="text-gray-800 dark:text-gray-200">
-                  Thank you for completing the insurance fact find questionnaire. Your answers have been saved.
+                  Thank you for completing the insurance fact find
+                  questionnaire. Your answers have been saved.
                 </p>
               </div>
             </motion.div>
@@ -963,11 +1098,7 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
               : ""}
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleNextQuestion}
-            disabled={loading}
-          >
+          <Button size="sm" onClick={handleNextQuestion} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -985,5 +1116,5 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

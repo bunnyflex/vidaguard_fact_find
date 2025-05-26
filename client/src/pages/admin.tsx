@@ -5,36 +5,33 @@ import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 export default function Admin() {
-  const { isSignedIn, user, signIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  
-  // Development mode check
-  const devMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  const [, setLocation] = useLocation();
 
   // Check if user is admin
   const { isLoading } = useQuery({
-    queryKey: ["/api/me"],
+    queryKey: ["admin-check"],
     queryFn: async () => {
-      if (!isSignedIn) return null;
-
-      // Development mode check
-      const devMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-      
-      if (devMode) {
-        // In development mode, automatically set the user as an admin
-        setIsAdmin(true);
-        return { isAdmin: true };
+      if (!isSignedIn || !user) {
+        setLocation("/auth");
+        return null;
       }
-      
-      // In production, check with the server
-      const res = await fetch("/api/me", {
-        headers: {
-          "x-clerk-user-id": user?.id || "",
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch user data");
+
+      // Check with the server
+      const res = await fetch("/api/me");
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setLocation("/auth");
+          return null;
+        }
+        throw new Error("Failed to fetch user data");
+      }
+
       const userData = await res.json();
       setIsAdmin(userData.isAdmin);
       return userData;
@@ -42,43 +39,46 @@ export default function Admin() {
     enabled: isSignedIn === true,
   });
 
+  if (!isSignedIn) {
+    return null; // Will redirect in the query
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppHeader />
+        <main className="flex-1 container max-w-screen-xl mx-auto p-6">
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </main>
+        <AppFooter />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppHeader />
+        <main className="flex-1 container max-w-screen-xl mx-auto p-6">
+          <div className="flex flex-col items-center justify-center h-full">
+            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+            <p className="text-muted-foreground mb-6">
+              You do not have permission to access this page.
+            </p>
+            <Button onClick={() => setLocation("/")}>Return to Home</Button>
+          </div>
+        </main>
+        <AppFooter />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <AppHeader />
-      
-      <main className="flex-1 container mx-auto px-4 py-6">
-        {!isSignedIn ? (
-          <div className="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center">
-            <h2 className="text-2xl font-bold mb-4">Admin Access</h2>
-            <p className="mb-6 text-gray-600 dark:text-gray-300">
-              Please sign in to access the admin dashboard.
-            </p>
-            <Button 
-              className="w-full" 
-              onClick={signIn}
-            >
-              Sign In {devMode ? "(Development Mode)" : ""}
-            </Button>
-          </div>
-        ) : isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : isAdmin === false ? (
-          <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-sm text-center">
-            <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-            <p className="mb-6 text-gray-600">
-              You do not have admin privileges to access this dashboard.
-            </p>
-            <Button variant="outline" onClick={() => window.location.href = "/"}>
-              Return to Dashboard
-            </Button>
-          </div>
-        ) : (
-          <AdminDashboard />
-        )}
-      </main>
-      
+      <AdminDashboard />
       <AppFooter />
     </div>
   );
