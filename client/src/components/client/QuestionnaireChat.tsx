@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUser } from "@/components/auth/ClerkProvider";
+import { useUser } from "@clerk/clerk-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFactFind } from "@/hooks/useFactFind";
 
@@ -457,7 +457,7 @@ interface QuestionnaireChatProps {
 // Main component
 export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const { sessionId, createSession, saveAnswer } = useFactFind();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [state, setState] = useState<QuestionState>({
@@ -484,17 +484,24 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
     const increment = direction === "next" ? 1 : -1;
     let nextIndex = currentIndex + increment;
 
-    while (
-      nextIndex >= 0 &&
-      nextIndex < questions.length &&
-      questions[nextIndex].dependsOn &&
-      typeof questions[nextIndex].dependsOn === "object" &&
-      "questionId" in questions[nextIndex].dependsOn &&
-      typeof questions[nextIndex].dependsOn.questionId === "number" &&
-      answers[questions[nextIndex].dependsOn.questionId] !==
-        questions[nextIndex].dependsOn.value
-    ) {
-      nextIndex += increment;
+    while (nextIndex >= 0 && nextIndex < questions.length) {
+      const nextQuestion = questions[nextIndex];
+      const dependency = nextQuestion.dependsOn;
+
+      if (!dependency) {
+        break;
+      }
+
+      if (
+        typeof dependency === "object" &&
+        "questionId" in dependency &&
+        typeof dependency.questionId === "number" &&
+        answers[dependency.questionId] !== dependency.value
+      ) {
+        nextIndex += increment;
+      } else {
+        break;
+      }
     }
 
     return nextIndex >= 0 && nextIndex < questions.length ? nextIndex : -1;
@@ -502,6 +509,15 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
 
   // Initialize with intro
   useEffect(() => {
+    if (!isSignedIn) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to continue with the questionnaire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setState({
       question: null,
       isTyping: true,
@@ -516,10 +532,13 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         try {
           await createSession();
         } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error occurred";
           console.error("Failed to create session:", error);
           toast({
-            title: "Error",
-            description: "Failed to create session.",
+            title: "Session Creation Failed",
+            description: `Could not start questionnaire: ${errorMessage}`,
+            variant: "destructive",
           });
         }
       }
@@ -552,7 +571,7 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
         });
       }, 1000);
     }, 1500);
-  }, []);
+  }, [isSignedIn]);
 
   // Focus input when question changes
   useEffect(() => {
@@ -576,6 +595,15 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
 
   // Handle moving to the next question
   const handleNextQuestion = async () => {
+    if (!isSignedIn) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to continue with the questionnaire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (state.isIntro) {
       setState({
         question: questions[0],
@@ -594,91 +622,93 @@ export function QuestionnaireChat({ onComplete }: QuestionnaireChatProps) {
     const questionId = state.question.id;
     let answerValue: any;
 
-    if (state.question.type === "text") {
-      answerValue = textInput.trim();
-      if (!answerValue) {
-        answerValue = "Not provided";
-      }
-    } else if (state.question.type === "number") {
-      answerValue = numberInput ? numberInput : "Not provided";
-    } else if (state.question.type === "checkbox-multiple") {
-      const selectedOptions = Object.entries(checkboxValues)
-        .filter(([_, checked]) => checked)
-        .map(([option]) => option);
-      answerValue = selectedOptions.length
-        ? selectedOptions.join(", ")
-        : "None selected";
-    } else {
-      // Multiple choice
-      if (!answers[questionId]) {
-        toast({
-          title: "Please select an option",
-          description: "Please select at least one option to continue.",
-          variant: "destructive",
-        });
-        return;
-      }
-      answerValue = answers[questionId];
-    }
-
     try {
+      if (state.question.type === "text") {
+        answerValue = textInput.trim() || "Not provided";
+      } else if (state.question.type === "number") {
+        answerValue = numberInput || "Not provided";
+      } else if (state.question.type === "checkbox-multiple") {
+        const selectedOptions = Object.entries(checkboxValues)
+          .filter(([_, checked]) => checked)
+          .map(([option]) => option);
+        answerValue = selectedOptions.length
+          ? selectedOptions.join(", ")
+          : "None selected";
+      } else {
+        // Multiple choice
+        if (!answers[questionId]) {
+          toast({
+            title: "Selection Required",
+            description: "Please select an option to continue.",
+            variant: "destructive",
+          });
+          return;
+        }
+        answerValue = answers[questionId];
+      }
+
       setLoading(true);
+
       // Save to our fact-find system
       if (sessionId) {
         await saveAnswer(questionId, answerValue.toString());
+      } else {
+        throw new Error("No active session found");
+      }
+
+      // Store answer locally
+      setAnswers((prev) => ({ ...prev, [questionId]: answerValue }));
+
+      // Move to the next question
+      const nextIndex = getNextQuestionIndex(currentQuestionIndex);
+      if (nextIndex !== -1) {
+        setCurrentQuestionIndex(nextIndex);
+        setState({
+          question: questions[nextIndex],
+          isTyping: false,
+          showOptions: true,
+          isIntro: false,
+          isComplete: false,
+        });
+      } else {
+        // All questions completed
+        setState({
+          question: {
+            id: -1,
+            text: "Thank you for completing the questionnaire! I'm preparing your summary now.",
+            type: "text",
+          },
+          isTyping: false,
+          showOptions: false,
+          isIntro: false,
+          isComplete: true,
+        });
+
+        // Format answers for the callback
+        const formattedAnswers = Object.entries(answers).map(([id, value]) => {
+          const question = questions.find((q) => q.id === parseInt(id));
+          return {
+            question: question ? question.text : `Question ${id}`,
+            answer: value.toString(),
+          };
+        });
+
+        // Call the onComplete callback with the session ID and formatted answers
+        if (sessionId) {
+          onComplete(sessionId, formattedAnswers);
+        }
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       console.error("Error saving answer:", error);
       toast({
-        title: "Error",
-        description: "Failed to save your answer.",
+        title: "Save Failed",
+        description: `Failed to save your answer: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-    }
-
-    // Store answer locally
-    setAnswers((prev) => ({ ...prev, [questionId]: answerValue }));
-
-    // Move to the next question
-    const nextIndex = getNextQuestionIndex(currentQuestionIndex);
-    if (nextIndex !== -1) {
-      setCurrentQuestionIndex(nextIndex);
-      setState({
-        question: questions[nextIndex],
-        isTyping: false,
-        showOptions: true,
-        isIntro: false,
-        isComplete: false,
-      });
-    } else {
-      // All questions completed
-      setState({
-        question: {
-          id: -1,
-          text: "Thank you for completing the questionnaire! I'm preparing your summary now.",
-          type: "text",
-        },
-        isTyping: false,
-        showOptions: false,
-        isIntro: false,
-        isComplete: true,
-      });
-
-      // Format answers for the callback
-      const formattedAnswers = Object.entries(answers).map(([id, value]) => {
-        const question = questions.find((q) => q.id === parseInt(id));
-        return {
-          question: question ? question.text : `Question ${id}`,
-          answer: value.toString(),
-        };
-      });
-
-      // Call the onComplete callback with the session ID and formatted answers
-      if (sessionId) {
-        onComplete(sessionId, formattedAnswers);
-      }
     }
   };
 

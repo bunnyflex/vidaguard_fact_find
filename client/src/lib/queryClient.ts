@@ -23,23 +23,57 @@ export async function apiRequest<T = any>(
   url: string,
   data?: unknown | undefined
 ): Promise<T> {
-  // Get the session token from Clerk
-  const token = await window.Clerk?.session?.getToken();
+  try {
+    // Get the session token from Clerk
+    if (!window.Clerk) {
+      console.error("Clerk is not initialized");
+      throw new Error("Authentication not initialized");
+    }
 
-  const headers: Record<string, string> = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+    if (!window.Clerk.session) {
+      console.error("No active Clerk session");
+      throw new Error("No active session");
+    }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+    const token = await window.Clerk.session.getToken();
+    if (!token) {
+      console.error("Failed to get Clerk session token");
+      throw new Error("No authentication token available");
+    }
 
-  await throwIfResNotOk(res);
-  return await res.json();
+    console.log(
+      "Making API request to:",
+      url,
+      "with token:",
+      token.substring(0, 10) + "..."
+    );
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("API request failed:", {
+        status: res.status,
+        statusText: res.statusText,
+        error: errorText,
+      });
+      throw new Error(`${res.status}: ${errorText}`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("API request failed:", error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -48,24 +82,49 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Get the session token from Clerk
-    const token = await window.Clerk?.session?.getToken();
+    try {
+      // Get the session token from Clerk
+      if (!window.Clerk) {
+        console.error("Clerk is not initialized");
+        throw new Error("Authentication not initialized");
+      }
 
-    const headers: Record<string, string> = {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+      if (!window.Clerk.session) {
+        console.error("No active Clerk session");
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+        throw new Error("No active session");
+      }
 
-    const res = await fetch(queryKey[0] as string, {
-      headers,
-      credentials: "include",
-    });
+      const token = await window.Clerk.session.getToken();
+      if (!token) {
+        console.error("Failed to get Clerk session token");
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+        throw new Error("No authentication token available");
+      }
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      const res = await fetch(queryKey[0] as string, {
+        headers,
+        credentials: "include",
+      });
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error("Query failed:", error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

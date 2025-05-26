@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useUser } from "@/components/auth/ClerkProvider";
+import { useUser, useClerk } from "@clerk/clerk-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -12,26 +12,38 @@ interface Answer {
 }
 
 export function useFactFind() {
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
+  const { session } = useClerk();
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Create a new session
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      console.log("Creating new session for user:", user?.id);
+      if (!isSignedIn || !user) {
+        throw new Error("User must be logged in");
+      }
+
+      // First get the user's database ID
+      const userResponse = await apiRequest<{ id: number }>("GET", "/api/me");
+
+      // Create the session with the user's database ID
       const response = await apiRequest("POST", "/api/sessions", {
-        userId: user?.id,
-        email: user?.emailAddresses?.[0]?.emailAddress,
+        userId: userResponse.id,
         status: "in-progress",
       });
-      console.log("Session created:", response);
+
       return response;
     },
     onSuccess: (data) => {
-      console.log("Setting session ID:", data.id);
       setSessionId(data.id);
+      setError(null);
+    },
+    onError: (error: Error) => {
+      setError(`Failed to create session: ${error.message}`);
+      console.error("Session creation error:", error);
     },
   });
 
@@ -44,12 +56,14 @@ export function useFactFind() {
       questionId: number;
       value: string;
     }) => {
+      if (!isSignedIn || !user) {
+        throw new Error("User must be logged in");
+      }
+
       if (!sessionId) {
-        console.error("No active session when trying to save answer");
         throw new Error("No active session");
       }
 
-      console.log("Saving answer:", { sessionId, questionId, value });
       const response = await apiRequest(
         "POST",
         `/api/sessions/${sessionId}/answers`,
@@ -58,77 +72,101 @@ export function useFactFind() {
           value,
         }
       );
-      console.log("Answer saved:", response);
+
       return response;
     },
     onSuccess: (data) => {
-      console.log("Updating answers state with new answer:", data);
       setAnswers((prev) => {
-        // Replace answer if it already exists, otherwise add it
         const existingIndex = prev.findIndex(
           (a) => a.questionId === data.questionId
         );
         if (existingIndex >= 0) {
           const newAnswers = [...prev];
           newAnswers[existingIndex] = data;
-          console.log("Updated existing answer:", newAnswers);
           return newAnswers;
-        } else {
-          console.log("Added new answer:", [...prev, data]);
-          return [...prev, data];
         }
+        return [...prev, data];
       });
+      setError(null);
+    },
+    onError: (error: Error) => {
+      setError(`Failed to save answer: ${error.message}`);
+      console.error("Answer save error:", error);
     },
   });
 
   // Fetch existing session if available
   useEffect(() => {
     const fetchExistingSession = async () => {
-      if (!user) return;
+      if (!isSignedIn || !user) return;
 
       try {
         setIsLoading(true);
-        const response = await fetch("/api/sessions");
+        setError(null);
 
-        if (response.ok) {
-          const sessions = await response.json();
+        const token = await session?.getToken();
+        if (!token) {
+          throw new Error("Failed to get authentication token");
+        }
 
-          // Find most recent incomplete session if it exists
-          const incompleteSession = sessions.find((s: any) => !s.completedAt);
+        const response = await fetch("/api/sessions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-          if (incompleteSession) {
-            setSessionId(incompleteSession.id);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            // Fetch answers for this session
-            const answersResponse = await fetch(
-              `/api/sessions/${incompleteSession.id}`
-            );
+        const sessions = await response.json();
+        const incompleteSession = sessions.find((s: any) => !s.completedAt);
 
-            if (answersResponse.ok) {
-              const data = await answersResponse.json();
-              setAnswers(data.answers || []);
+        if (incompleteSession) {
+          setSessionId(incompleteSession.id);
+
+          const answersResponse = await fetch(
+            `/api/sessions/${incompleteSession.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             }
+          );
+
+          if (!answersResponse.ok) {
+            throw new Error(`HTTP error! status: ${answersResponse.status}`);
           }
+
+          const data = await answersResponse.json();
+          setAnswers(data.answers || []);
         }
       } catch (error) {
-        console.error("Error fetching existing session:", error);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        setError(`Failed to fetch session: ${message}`);
+        console.error("Session fetch error:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchExistingSession();
-  }, [user]);
+  }, [isSignedIn, user, session]);
 
   // Create a new session
   const createSession = async () => {
-    if (!user) throw new Error("User must be logged in");
+    if (!isSignedIn || !user) {
+      throw new Error("User must be logged in");
+    }
     return createSessionMutation.mutateAsync();
   };
 
   // Save an answer
   const saveAnswer = async (questionId: number, value: string) => {
-    if (!user) throw new Error("User must be logged in");
+    if (!isSignedIn || !user) {
+      throw new Error("User must be logged in");
+    }
     return saveAnswerMutation.mutateAsync({ questionId, value });
   };
 
@@ -137,16 +175,27 @@ export function useFactFind() {
     if (!sessionId) return [];
 
     try {
-      const response = await fetch(`/api/sessions/${sessionId}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.answers || [];
+      const token = await session?.getToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
       }
 
-      return [];
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.answers || [];
     } catch (error) {
-      console.error("Error fetching session answers:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setError(`Failed to fetch answers: ${message}`);
+      console.error("Answers fetch error:", error);
       return [];
     }
   };
@@ -155,6 +204,7 @@ export function useFactFind() {
     sessionId,
     answers,
     isLoading,
+    error,
     createSession,
     saveAnswer,
     getSessionAnswers,

@@ -1,13 +1,22 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { eq } from 'drizzle-orm';
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { eq, desc } from "drizzle-orm";
 
-import * as schema from '../shared/schema';
-import { users, questions, sessions, answers, configs } from '../shared/schema';
-import { type User, type InsertUser, type Question, type InsertQuestion, 
-         type Session, type InsertSession, type Answer, type InsertAnswer, 
-         type Config, type InsertConfig } from '../shared/schema';
-import { IStorage } from './storage';
+import * as schema from "../shared/schema";
+import { users, questions, sessions, answers, configs } from "../shared/schema";
+import {
+  type User,
+  type InsertUser,
+  type Question,
+  type InsertQuestion,
+  type Session,
+  type InsertSession,
+  type Answer,
+  type InsertAnswer,
+  type Config,
+  type InsertConfig,
+} from "../shared/schema";
+import { IStorage } from "./storage";
 
 /**
  * Supabase implementation of storage interface
@@ -16,23 +25,35 @@ export class SupabaseStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor(connectionString: string) {
-    const sql = neon(connectionString);
-    this.db = drizzle(sql, { schema });
+    const queryClient = postgres(connectionString);
+    this.db = drizzle(queryClient, { schema });
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
     return result[0];
   }
 
   async getUserByClerkId(clerkId: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1);
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkId))
+      .limit(1);
     return result[0];
   }
 
@@ -47,7 +68,11 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getQuestion(id: number): Promise<Question | undefined> {
-    const result = await this.db.select().from(questions).where(eq(questions.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, id))
+      .limit(1);
     return result[0];
   }
 
@@ -56,7 +81,10 @@ export class SupabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateQuestion(id: number, question: Partial<InsertQuestion>): Promise<Question | undefined> {
+  async updateQuestion(
+    id: number,
+    question: Partial<InsertQuestion>
+  ): Promise<Question | undefined> {
     const result = await this.db
       .update(questions)
       .set({ ...question, updatedAt: new Date() })
@@ -66,17 +94,27 @@ export class SupabaseStorage implements IStorage {
   }
 
   async deleteQuestion(id: number): Promise<boolean> {
-    const result = await this.db.delete(questions).where(eq(questions.id, id)).returning();
+    const result = await this.db
+      .delete(questions)
+      .where(eq(questions.id, id))
+      .returning();
     return result.length > 0;
   }
 
   // Session operations
   async getSessions(): Promise<Session[]> {
-    return await this.db.select().from(sessions).orderBy(sessions.createdAt, 'desc');
+    return await this.db
+      .select()
+      .from(sessions)
+      .orderBy(desc(sessions.createdAt));
   }
 
   async getSession(id: number): Promise<Session | undefined> {
-    const result = await this.db.select().from(sessions).where(eq(sessions.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, id))
+      .limit(1);
     return result[0];
   }
 
@@ -85,7 +123,7 @@ export class SupabaseStorage implements IStorage {
       .select()
       .from(sessions)
       .where(eq(sessions.userId, userId))
-      .orderBy(sessions.createdAt, 'desc');
+      .orderBy(desc(sessions.createdAt));
   }
 
   async createSession(session: InsertSession): Promise<Session> {
@@ -93,7 +131,10 @@ export class SupabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateSession(id: number, session: Partial<InsertSession>): Promise<Session | undefined> {
+  async updateSession(
+    id: number,
+    session: Partial<InsertSession>
+  ): Promise<Session | undefined> {
     const result = await this.db
       .update(sessions)
       .set(session)
@@ -111,7 +152,11 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getAnswer(id: number): Promise<Answer | undefined> {
-    const result = await this.db.select().from(answers).where(eq(answers.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(answers)
+      .where(eq(answers.id, id))
+      .limit(1);
     return result[0];
   }
 
@@ -120,7 +165,10 @@ export class SupabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateAnswer(id: number, answer: Partial<InsertAnswer>): Promise<Answer | undefined> {
+  async updateAnswer(
+    id: number,
+    answer: Partial<InsertAnswer>
+  ): Promise<Answer | undefined> {
     const result = await this.db
       .update(answers)
       .set(answer)
@@ -135,10 +183,12 @@ export class SupabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateConfig(config: Partial<InsertConfig>): Promise<Config | undefined> {
+  async updateConfig(
+    config: Partial<InsertConfig>
+  ): Promise<Config | undefined> {
     // Check if config exists first
     const existingConfig = await this.getConfig();
-    
+
     if (existingConfig) {
       // Update existing config
       const result = await this.db
@@ -153,7 +203,8 @@ export class SupabaseStorage implements IStorage {
         .insert(configs)
         .values({
           id: 1,
-          aiPrompt: "You are an insurance assistant helping collect fact-find information. Be polite, clear, and concise. Ask one question at a time and wait for the user's response before continuing. Use the user's name when appropriate. If the user seems confused, offer clarification. For yes/no questions, present them as clear choices.",
+          aiPrompt:
+            "You are an insurance assistant helping collect fact-find information. Be polite, clear, and concise. Ask one question at a time and wait for the user's response before continuing. Use the user's name when appropriate. If the user seems confused, offer clarification. For yes/no questions, present them as clear choices.",
           aiModel: "gpt-4o",
           aiTemperature: "0.7",
           emailTemplate: "",

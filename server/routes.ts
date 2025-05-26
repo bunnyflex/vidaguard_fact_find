@@ -17,74 +17,15 @@ import {
 import { generateFactFindPDF } from "./lib/pdf";
 import { generateFactFindExcel, formatFactFindDataForExcel } from "./lib/excel";
 import { sendFactFindEmail } from "./lib/email";
-
-// Define middleware types
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: number;
-    clerkId: string;
-    email: string;
-    isAdmin: boolean;
-    createdAt: Date;
-  };
-}
+import {
+  requireAuth,
+  requireAdmin,
+  type AuthenticatedRequest,
+} from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const api = "/api";
-
-  // Authentication middleware
-  const requireUser = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: Function
-  ) => {
-    try {
-      const clerkId = req.headers["x-clerk-user-id"] as string;
-
-      if (!clerkId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      // Get user from database
-      const user = await storage.getUserByClerkId(clerkId);
-
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      // Ensure required fields are present
-      if (user.isAdmin === null) {
-        return res.status(401).json({ message: "Invalid user data" });
-      }
-
-      req.user = {
-        id: user.id,
-        clerkId: user.clerkId,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        createdAt: user.createdAt || new Date(),
-      };
-      next();
-    } catch (error) {
-      console.error("Auth middleware error:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  };
-
-  // Admin middleware
-  const requireAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: Function
-  ) => {
-    if (!req.user?.isAdmin) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden - Admin access required" });
-    }
-    next();
-  };
 
   // Health check endpoint
   app.get(`${api}/health`, (req, res) => {
@@ -92,48 +33,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User APIs
-  app.post(`${api}/users`, async (req, res) => {
-    try {
-      const clerkId = req.headers["x-clerk-user-id"] as string;
+  app.post(
+    `${api}/users`,
+    requireAuth,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const user = req.user!;
 
-      if (!clerkId) {
-        return res.status(401).json({ message: "Unauthorized" });
+        // Get user metadata from request
+        const isAdmin = req.body.metadata?.isAdmin === true;
+
+        // Validate request body
+        const result = insertUserSchema.safeParse({
+          ...req.body,
+          clerkId: user.clerkId,
+          isAdmin: isAdmin || false,
+        });
+
+        if (!result.success) {
+          return res
+            .status(400)
+            .json({ message: "Invalid request", errors: result.error.errors });
+        }
+
+        // Create new user
+        const newUser = await storage.createUser(result.data);
+        res.status(201).json(newUser);
+      } catch (error) {
+        console.error("User creation error:", error);
+        res.status(500).json({ message: "Internal server error" });
       }
-
-      // Check if user already exists
-      let user = await storage.getUserByClerkId(clerkId);
-
-      if (user) {
-        return res.json(user);
-      }
-
-      // Get user metadata from request
-      const isAdmin = req.body.metadata?.isAdmin === true;
-
-      // Validate request body
-      const result = insertUserSchema.safeParse({
-        ...req.body,
-        clerkId,
-        isAdmin: isAdmin || false,
-      });
-
-      if (!result.success) {
-        return res
-          .status(400)
-          .json({ message: "Invalid request", errors: result.error.errors });
-      }
-
-      // Create new user
-      user = await storage.createUser(result.data);
-
-      res.status(201).json(user);
-    } catch (error) {
-      console.error("User creation error:", error);
-      res.status(500).json({ message: "Internal server error" });
     }
-  });
+  );
 
-  app.get(`${api}/me`, requireUser, async (req: AuthenticatedRequest, res) => {
+  app.get(`${api}/me`, requireAuth, async (req: AuthenticatedRequest, res) => {
     res.json(req.user);
   });
 
@@ -148,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post(`${api}/questions`, requireUser, requireAdmin, async (req, res) => {
+  app.post(`${api}/questions`, requireAuth, requireAdmin, async (req, res) => {
     try {
       const result = insertQuestionSchema.safeParse(req.body);
 
@@ -168,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put(
     `${api}/questions/:id`,
-    requireUser,
+    requireAuth,
     requireAdmin,
     async (req, res) => {
       try {
@@ -199,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete(
     `${api}/questions/:id`,
-    requireUser,
+    requireAuth,
     requireAdmin,
     async (req, res) => {
       try {
@@ -221,17 +154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session APIs
   app.get(
     `${api}/sessions`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const user = req.user!;
-
         let sessions;
+
         if (user.isAdmin) {
-          // Admins can see all sessions
           sessions = await storage.getSessions();
         } else {
-          // Regular users only see their own sessions
           sessions = await storage.getUserSessions(user.id);
         }
 
@@ -245,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get(
     `${api}/sessions/:id`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const sessionId = parseInt(req.params.id);
@@ -273,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post(
     `${api}/sessions`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const user = req.user!;
@@ -300,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put(
     `${api}/sessions/:id`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const sessionId = parseInt(req.params.id);
@@ -340,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Answer APIs
   app.post(
     `${api}/sessions/:sessionId/answers`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const sessionId = parseInt(req.params.sessionId);
@@ -378,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // AI APIs
-  app.post(`${api}/ai/generate`, requireUser, async (req, res) => {
+  app.post(`${api}/ai/generate`, requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         messages: z.array(
@@ -424,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Config APIs
-  app.get(`${api}/config`, requireUser, requireAdmin, async (req, res) => {
+  app.get(`${api}/config`, requireAuth, requireAdmin, async (req, res) => {
     try {
       const config = await storage.getConfig();
       res.json(config);
@@ -434,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put(`${api}/config`, requireUser, requireAdmin, async (req, res) => {
+  app.put(`${api}/config`, requireAuth, requireAdmin, async (req, res) => {
     try {
       const result = insertConfigSchema.partial().safeParse(req.body);
 
@@ -460,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PDF Generation API
   app.post(
     `${api}/sessions/:id/pdf`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const sessionId = parseInt(req.params.id);
@@ -484,10 +415,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questionsMap = new Map();
 
         for (const answer of answers) {
-          if (!questionsMap.has(answer.questionId)) {
-            const question = await storage.getQuestion(answer.questionId);
+          const questionId = answer.questionId;
+          if (typeof questionId === "number" && !questionsMap.has(questionId)) {
+            const question = await storage.getQuestion(questionId);
             if (question) {
-              questionsMap.set(answer.questionId, question);
+              questionsMap.set(questionId, question);
             }
           }
         }
@@ -559,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Excel Export API
   app.get(
     `${api}/sessions/:id/excel`,
-    requireUser,
+    requireAuth,
     async (req: AuthenticatedRequest, res) => {
       try {
         const sessionId = parseInt(req.params.id);
@@ -577,7 +509,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Get session user
-        const sessionUser = await storage.getUser(session.userId);
+        const userId = session.userId;
+        if (typeof userId !== "number") {
+          return res.status(400).json({ message: "Invalid user ID" });
+        }
+        const sessionUser = await storage.getUser(userId);
 
         if (!sessionUser) {
           return res.status(404).json({ message: "Session user not found" });
@@ -590,10 +526,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const questionsMap = new Map();
 
         for (const answer of answers) {
-          if (!questionsMap.has(answer.questionId)) {
-            const question = await storage.getQuestion(answer.questionId);
+          const questionId = answer.questionId;
+          if (typeof questionId === "number" && !questionsMap.has(questionId)) {
+            const question = await storage.getQuestion(questionId);
             if (question) {
-              questionsMap.set(answer.questionId, question);
+              questionsMap.set(questionId, question);
             }
           }
         }
